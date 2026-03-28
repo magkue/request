@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { SENTRY_DSN } from "@/config/sentry";
+import { OTEL_COLLECTOR_URL } from "@/config/telemetry";
 import { type ConsentState, getConsent, setConsent } from "@/lib/consent";
 import { initSentry } from "@/lib/sentry";
 import { initTelemetry } from "@/lib/telemetry";
 
 export function CookieConsentBanner() {
   const [consent, setConsentState] = useState<ConsentState>(getConsent);
+  const monitoringConfigured =
+    Boolean(SENTRY_DSN) || Boolean(OTEL_COLLECTOR_URL);
 
-  if (consent !== "pending") {
+  if (!monitoringConfigured || consent !== "pending") {
     return null;
   }
 
