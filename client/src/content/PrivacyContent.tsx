@@ -1,4 +1,10 @@
+import { SENTRY_DSN } from "@/config/sentry";
+import { OTEL_COLLECTOR_URL } from "@/config/telemetry";
+
 export function PrivacyContent() {
+  const sentryEnabled = Boolean(SENTRY_DSN);
+  const otelEnabled = Boolean(OTEL_COLLECTOR_URL);
+
   return (
     <>
       <p className="mb-4">
@@ -156,14 +162,110 @@ export function PrivacyContent() {
         persons.
       </p>
 
+      {(sentryEnabled || otelEnabled) && (
+        <>
+          <h3 className="text-lg font-medium mb-2 mt-6">
+            Error tracking and performance monitoring
+          </h3>
+
+          <p className="mb-4">
+            To ensure the stability and security of this application, we use
+            monitoring tools hosted on our own infrastructure at the Technical
+            University of Munich. No data is transferred to third-party
+            services.
+          </p>
+
+          {sentryEnabled && (
+            <>
+              <h4 className="text-base font-medium mb-2 mt-4">
+                Sentry (Error Tracking)
+              </h4>
+
+              <p className="mb-4">
+                We use a self-hosted Sentry instance for error tracking and
+                performance monitoring. When an error occurs or during normal
+                usage, the following data may be transmitted to our Sentry
+                server:
+              </p>
+
+              <ul className="list-disc list-inside space-y-2 mb-4">
+                <li>Error messages and stack traces</li>
+                <li>Page URLs and navigation paths</li>
+                <li>Browser type, version, and operating system</li>
+                <li>Performance data (page load times, API response times)</li>
+                <li>User interaction events (e.g. button clicks)</li>
+              </ul>
+
+              <p className="mb-4">
+                No directly identifying information (such as IP addresses,
+                names, or email addresses) is collected. However, technical data
+                such as browser type, version, and operating system is
+                transmitted. This processing is based on your consent (Art. 6(1)
+                lit. a GDPR). You can withdraw your consent at any time by
+                deleting the <code>monitoring_consent</code> cookie in your
+                browser settings.
+              </p>
+            </>
+          )}
+
+          {otelEnabled && (
+            <>
+              <h4 className="text-base font-medium mb-2 mt-4">
+                OpenTelemetry (Performance Monitoring)
+              </h4>
+
+              <p className="mb-4">
+                We use OpenTelemetry to collect performance metrics and request
+                traces on our own infrastructure. This includes:
+              </p>
+
+              <ul className="list-disc list-inside space-y-2 mb-4">
+                <li>
+                  Page load performance metrics (Largest Contentful Paint,
+                  Cumulative Layout Shift, Interaction to Next Paint)
+                </li>
+                <li>API request URLs, durations, and status codes</li>
+                <li>User interaction events (e.g. button clicks)</li>
+                <li>
+                  Trace correlation identifiers to link frontend and backend
+                  requests
+                </li>
+              </ul>
+
+              <p className="mb-4">
+                This data is used to identify performance bottlenecks and
+                improve the user experience. This processing is based on your
+                consent (Art. 6(1) lit. a GDPR). You can withdraw your consent
+                at any time by deleting the <code>monitoring_consent</code>{" "}
+                cookie in your browser settings.
+              </p>
+            </>
+          )}
+        </>
+      )}
+
       <h3 className="text-lg font-medium mb-2 mt-6">Cookies</h3>
 
-      <p className="mb-4">
-        This application uses cookies for authentication purposes. When you log
-        in, a session cookie is stored to maintain your authenticated session.
-        These cookies are essential for the functionality of the application and
-        are deleted when you log out or close your browser.
-      </p>
+      <p className="mb-4">This application uses the following cookies:</p>
+
+      <ul className="list-disc list-inside space-y-2 mb-4">
+        <li>
+          <strong>Session cookie:</strong> When you log in, a session cookie is
+          stored to maintain your authenticated session. This cookie is
+          essential for the functionality of the application and is deleted when
+          you log out or close your browser.
+        </li>
+        {(sentryEnabled || otelEnabled) && (
+          <li>
+            <strong>
+              <code>monitoring_consent</code>:
+            </strong>{" "}
+            Stores your choice regarding error tracking and performance
+            monitoring (accepted or declined). This cookie is valid for one year
+            and is required to remember your consent decision.
+          </li>
+        )}
+      </ul>
 
       <h3 className="text-lg font-medium mb-2 mt-6">
         Right to file a complaint with the responsible supervisory authority

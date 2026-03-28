@@ -34,6 +34,7 @@ client:
     VITE_KEYCLOAK_REALM: ""
     VITE_KEYCLOAK_CLIENT_ID: ""
     VITE_ADMIN_ROLE: admin
+    VITE_SENTRY_DSN: ""
 
 server:
   replicaCount: 2
@@ -81,6 +82,7 @@ server:
     REDMINE_TRACKER_ID: "0"
     REDMINE_USERNAME: ""
     GITLAB_URL: ""
+    SENTRY_DSN: ""
   secrets:
     databaseUrl: ""
     jiraUsername: ""
@@ -108,6 +110,26 @@ networkPolicy:
     podSelector:
       matchLabels:
         app.kubernetes.io/component: controller
+
+otel:
+  collectorEndpoint: ""
+  environment: "production"
+
+  server:
+    serviceName: "aet-request-server"
+    metricsPort: 9464
+
+  client:
+    serviceName: "aet-request-client"
+    collectorUrl: ""
+    nginxProxy:
+      enabled: false
+
+  serviceMonitor:
+    enabled: false
+    interval: "30s"
+    scrapeTimeout: "10s"
+    labels: {}
 
 postgresql:
   enabled: true

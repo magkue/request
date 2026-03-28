@@ -54,5 +54,17 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
             timeoutSeconds: 5
+          {{- if .Values.otel.client.nginxProxy.enabled }}
+          volumeMounts:
+            - name: nginx-otel-conf
+              mountPath: /etc/nginx/extra.d/otel-proxy.conf
+              subPath: otel-proxy.conf
+          {{- end }}
           resources:
             {{- toYaml .Values.client.resources | nindent 12 }}
+      {{- if .Values.otel.client.nginxProxy.enabled }}
+      volumes:
+        - name: nginx-otel-conf
+          configMap:
+            name: {{ include "aet-request.client.fullname" . }}-nginx
+      {{- end }}

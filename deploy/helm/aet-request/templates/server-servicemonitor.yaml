@@ -1,0 +1,25 @@
+{{- if .Values.otel.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "aet-request.server.fullname" . }}
+  labels:
+    {{- include "aet-request.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+    {{- with .Values.otel.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "aet-request.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.otel.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.otel.serviceMonitor.scrapeTimeout }}
+{{- end }}

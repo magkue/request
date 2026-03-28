@@ -12,6 +12,7 @@ FROM nginx:1.27-alpine
 
 COPY deploy/client/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
+RUN mkdir -p /etc/nginx/extra.d
 
 EXPOSE 8080
 

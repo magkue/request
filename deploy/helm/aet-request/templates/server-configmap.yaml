@@ -24,3 +24,7 @@ data:
   REDMINE_TRACKER_ID: {{ .Values.server.config.REDMINE_TRACKER_ID | quote }}
   REDMINE_USERNAME: {{ .Values.server.config.REDMINE_USERNAME | quote }}
   GITLAB_URL: {{ .Values.server.config.GITLAB_URL | quote }}
+  OTEL_SERVICE_NAME: {{ .Values.otel.server.serviceName | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otel.collectorEndpoint | quote }}
+  OTEL_ENVIRONMENT: {{ .Values.otel.environment | quote }}
+  SENTRY_DSN: {{ .Values.server.config.SENTRY_DSN | quote }}

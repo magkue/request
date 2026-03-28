@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { AboutPage } from "@/pages/AboutPage";
@@ -50,6 +51,7 @@ function App() {
           <Route path="/imprint" element={<ImprintPage />} />
         </Routes>
       </AuthProvider>
+      <CookieConsentBanner />
     </BrowserRouter>
   );
 }

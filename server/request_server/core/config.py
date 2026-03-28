@@ -60,6 +60,15 @@ class Settings(BaseSettings):
     gitlab_url: str = ""
     gitlab_token: str = ""
 
+    # OpenTelemetry
+    otel_service_name: str = "aet-request-server"
+    otel_exporter_otlp_endpoint: str = ""
+    otel_exporter_otlp_protocol: str = "grpc"
+    otel_environment: str = "development"
+
+    # Sentry
+    sentry_dsn: str = ""
+
     @property
     def jira_enabled(self) -> bool:
         return bool(

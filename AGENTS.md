@@ -11,6 +11,7 @@ A web application for requesting university chair resources. Provides structured
 - **Forms**: React Hook Form + Zod validation
 - **Routing**: React Router v7
 - **Auth**: OIDC Client TS (Keycloak)
+- **Observability**: OpenTelemetry (traces, metrics, Web Vitals), Sentry (error tracking)
 - **Code Quality**: Biome
 
 ### Backend
@@ -19,6 +20,7 @@ A web application for requesting university chair resources. Provides structured
 - **Database**: PostgreSQL, SQLAlchemy (async), Alembic migrations, asyncpg
 - **Auth**: Keycloak OIDC, role-based access control
 - **Ticket Systems**: Jira, Redmine, Debug, NoOp (configurable via `TICKET_SYSTEM`)
+- **Observability**: OpenTelemetry (traces, metrics via Prometheus, log correlation)
 - **Code Quality**: Ruff (lint + format), ty (type checking)
 
 ## Project Structure
@@ -49,7 +51,7 @@ request-v2/
 ├── server/                      # FastAPI backend
 │   └── request_server/
 │       ├── api/routes/          # Route handlers
-│       ├── core/                # Config, security
+│       ├── core/                # Config, security, telemetry
 │       ├── db/                  # Session, base model
 │       ├── models/              # SQLAlchemy ORM models
 │       ├── schemas/             # Pydantic request/response schemas
@@ -207,6 +209,53 @@ Request flow: **Route → Schema validation → Service → Model → Database**
 - **Services** (`services/`): Business logic, ticket creation
 - **Descriptions** (`services/descriptions/`): Build formatted ticket descriptions from request data
 - **Ticket** (`services/ticket/`): Abstract base + implementations (Jira, Redmine, Debug, NoOp)
+
+## Observability
+
+All observability features are config-driven — no explicit enable flags. They activate automatically when the relevant environment variable is set.
+
+### Server (OpenTelemetry)
+
+| Variable | Purpose | Default |
+| -------- | ------- | ------- |
+| `OTEL_SERVICE_NAME` | Service name in traces/metrics | `aet-request-server` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint (setting this enables OTLP export) | `""` (disabled) |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` or `http/protobuf` | `grpc` |
+| `OTEL_ENVIRONMENT` | Deployment environment tag | `development` |
+
+- **Prometheus `/metrics`** is always exposed on the app (port 8000, cluster-internal only — not routed through ingress)
+- **OTLP traces + metrics** activate when `OTEL_EXPORTER_OTLP_ENDPOINT` is non-empty
+- Auto-instruments: FastAPI, SQLAlchemy, httpx, Python logging (trace/span ID correlation)
+- Health/metrics endpoints excluded from tracing to reduce noise
+- Implementation: `core/telemetry.py`
+
+### Client (OpenTelemetry)
+
+| Variable | Purpose | Default |
+| -------- | ------- | ------- |
+| `VITE_OTEL_COLLECTOR_URL` | OTLP HTTP endpoint (setting this enables OTEL) | `""` (disabled) |
+| `VITE_OTEL_SERVICE_NAME` | Service name | `aet-request-client` |
+| `VITE_OTEL_ENVIRONMENT` | Deployment environment tag | `development` |
+
+- Dynamically imported — zero bundle impact when disabled
+- Traces: document load, fetch/XHR (with W3C `traceparent` propagation to backend), user clicks
+- Metrics: Web Vitals (LCP, CLS, INP)
+- Implementation: `lib/telemetry.ts`
+
+### Client (Sentry)
+
+| Variable | Purpose | Default |
+| -------- | ------- | ------- |
+| `VITE_SENTRY_DSN` | Sentry DSN (setting this enables Sentry) | `""` (disabled) |
+
+- Dynamically imported — zero bundle impact when disabled
+- Includes browser tracing and session replay integrations
+- Reuses `VITE_OTEL_ENVIRONMENT` for the Sentry environment tag
+- Implementation: `lib/sentry.ts`
+
+### Helm Configuration
+
+OTEL settings are in the `otel` section of `values.yaml`. Set `otel.collectorEndpoint` to enable server-side OTLP export. Set `client.config.VITE_SENTRY_DSN` to enable Sentry. The `otel.client.nginxProxy.enabled` option proxies browser OTLP through nginx to avoid CORS issues.
 
 ## Code Standards
 

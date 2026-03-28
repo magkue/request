@@ -11,3 +11,11 @@ data:
   VITE_KEYCLOAK_REALM: {{ .Values.client.config.VITE_KEYCLOAK_REALM | quote }}
   VITE_KEYCLOAK_CLIENT_ID: {{ .Values.client.config.VITE_KEYCLOAK_CLIENT_ID | quote }}
   VITE_ADMIN_ROLE: {{ .Values.client.config.VITE_ADMIN_ROLE | quote }}
+  VITE_SENTRY_DSN: {{ .Values.client.config.VITE_SENTRY_DSN | quote }}
+  {{- if or .Values.otel.client.collectorUrl .Values.otel.client.nginxProxy.enabled }}
+  VITE_OTEL_COLLECTOR_URL: {{ .Values.otel.client.collectorUrl | default "/otlp" | quote }}
+  {{- else }}
+  VITE_OTEL_COLLECTOR_URL: ""
+  {{- end }}
+  VITE_OTEL_SERVICE_NAME: {{ .Values.otel.client.serviceName | quote }}
+  VITE_OTEL_ENVIRONMENT: {{ .Values.otel.environment | quote }}

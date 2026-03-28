@@ -1,0 +1,20 @@
+{{- if .Values.otel.client.nginxProxy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aet-request.client.fullname" . }}-nginx
+  labels:
+    {{- include "aet-request.labels" . | nindent 4 }}
+    app.kubernetes.io/component: client
+data:
+  otel-proxy.conf: |
+    location /otlp/ {
+        proxy_pass {{ .Values.otel.collectorEndpoint }}/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+        proxy_send_timeout 30s;
+    }
+{{- end }}

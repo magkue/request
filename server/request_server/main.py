@@ -5,13 +5,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from request_server.api.router import api_router
 from request_server.core.config import settings
+from request_server.core.telemetry import (
+    get_prometheus_app,
+    init_telemetry,
+    instrument_app,
+    shutdown_telemetry,
+)
+
+# Initialize OTEL providers before app creation
+init_telemetry()
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Startup
     yield
-    # Shutdown
+    shutdown_telemetry()
 
 
 app = FastAPI(
@@ -20,6 +28,9 @@ app = FastAPI(
     lifespan=lifespan,
     debug=settings.debug,
 )
+
+# Instrument FastAPI app with OTEL
+instrument_app(app)
 
 # CORS middleware
 app.add_middleware(
@@ -32,6 +43,9 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router)
+
+# Prometheus metrics endpoint
+app.mount("/metrics", get_prometheus_app())
 
 
 def get_status_response():

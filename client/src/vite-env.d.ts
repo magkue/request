@@ -9,6 +9,10 @@ type ImportMetaEnv = {
   VITE_KEYCLOAK_REALM: string
   VITE_KEYCLOAK_CLIENT_ID: string
   VITE_ADMIN_ROLE: string
+  VITE_OTEL_COLLECTOR_URL: string
+  VITE_OTEL_SERVICE_NAME: string
+  VITE_OTEL_ENVIRONMENT: string
+  VITE_SENTRY_DSN: string
   BASE_URL: string
   MODE: string
   DEV: boolean
