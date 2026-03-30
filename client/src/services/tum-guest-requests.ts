@@ -88,4 +88,28 @@ export const tumGuestRequestsService = {
   get: async (id: string): Promise<TUMGuestRequestResponse> => {
     return api.get<TUMGuestRequestResponse>(`/tum-guest-requests/${id}`);
   },
+
+  update: async (
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<TUMGuestRequestResponse> => {
+    return api.patch<TUMGuestRequestResponse>(
+      `/tum-guest-requests/${id}`,
+      data,
+    );
+  },
+
+  withdraw: async (id: string): Promise<TUMGuestRequestResponse> => {
+    return api.post<TUMGuestRequestResponse>(
+      `/tum-guest-requests/${id}/withdraw`,
+      {},
+    );
+  },
+
+  reopen: async (id: string): Promise<TUMGuestRequestResponse> => {
+    return api.post<TUMGuestRequestResponse>(
+      `/tum-guest-requests/${id}/reopen`,
+      {},
+    );
+  },
 };

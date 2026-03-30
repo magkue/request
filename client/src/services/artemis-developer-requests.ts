@@ -104,4 +104,28 @@ export const artemisDeveloperRequestsService = {
       `/artemis-developer-requests/${id}`,
     );
   },
+
+  update: async (
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<ArtemisDeveloperRequestResponse> => {
+    return api.patch<ArtemisDeveloperRequestResponse>(
+      `/artemis-developer-requests/${id}`,
+      data,
+    );
+  },
+
+  withdraw: async (id: string): Promise<ArtemisDeveloperRequestResponse> => {
+    return api.post<ArtemisDeveloperRequestResponse>(
+      `/artemis-developer-requests/${id}/withdraw`,
+      {},
+    );
+  },
+
+  reopen: async (id: string): Promise<ArtemisDeveloperRequestResponse> => {
+    return api.post<ArtemisDeveloperRequestResponse>(
+      `/artemis-developer-requests/${id}/reopen`,
+      {},
+    );
+  },
 };

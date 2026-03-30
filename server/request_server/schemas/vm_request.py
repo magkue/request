@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from request_server.core.config import settings
+from request_server.models.request_status import RequestStatus
 
 
 class ProjectType(StrEnum):
@@ -23,14 +24,6 @@ class StudyLevel(StrEnum):
 class Protocol(StrEnum):
     TCP = "tcp"
     UDP = "udp"
-
-
-class RequestStatus(StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
 
 
 # Project-specific details
@@ -185,6 +178,35 @@ class VMRequestResponse(BaseModel):
     def ticket_url(self) -> str | None:
         """Return the full URL to the ticket."""
         return settings.ticket_url(self.ticket_key)
+
+
+class VMRequestUpdate(BaseModel):
+    """Schema for updating a VM request (PATCH). All fields optional."""
+
+    hostname: str | None = Field(None, min_length=1, max_length=63)
+    description: str | None = Field(None, min_length=10)
+    project_type: ProjectType | None = Field(None, alias="projectType")
+    ipraktikum: IPraktikumDetails | None = None
+    thesis: ThesisDetails | None = None
+    chair_project: ChairProjectDetails | None = Field(None, alias="chairProject")
+    resources: Resources | None = None
+    firewall: Firewall | None = None
+    additional_users: list[str] | None = Field(None, alias="additionalUsers")
+    additional_comments: str | None = Field(None, alias="additionalComments")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("hostname")
+    @classmethod
+    def validate_hostname(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        pattern = r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                "Hostname must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
+            )
+        return v
 
 
 class VMRequestListResponse(BaseModel):

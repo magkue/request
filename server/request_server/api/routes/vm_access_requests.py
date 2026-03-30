@@ -12,6 +12,11 @@ from request_server.api.routes.ssh_keys import parse_ssh_key
 from request_server.core.config import settings
 from request_server.core.security import CurrentUser, get_current_user
 from request_server.db.session import get_db
+from request_server.models.request_status import (
+    EDITABLE_STATUSES,
+    WITHDRAWABLE_STATUSES,
+    RequestStatus,
+)
 from request_server.models.ssh_key import SSHKey
 from request_server.models.vm_access_request import VMAccessRequest as VMAccessRequestModel
 from request_server.schemas.vm_access_request import (
@@ -20,6 +25,7 @@ from request_server.schemas.vm_access_request import (
     VMAccessRequestCreate,
     VMAccessRequestListResponse,
     VMAccessRequestResponse,
+    VMAccessRequestUpdate,
 )
 from request_server.services.descriptions.vm_access_request import (
     handle_vm_access_ticket_creation,
@@ -181,4 +187,109 @@ async def get_vm_access_request(
             detail="Not authorized to view this request",
         )
 
+    return access_request
+
+
+@router.patch("/{request_id}", response_model=VMAccessRequestResponse)
+async def update_vm_access_request(
+    request_id: uuid.UUID,
+    update_data: VMAccessRequestUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMAccessRequestModel:
+    """Update a VM access request. Only allowed when status is editable."""
+    query = select(VMAccessRequestModel).where(VMAccessRequestModel.id == request_id)
+    result = await db.execute(query)
+    access_request = result.scalar_one_or_none()
+
+    if not access_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="VM access request not found",
+        )
+    if access_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    if access_request.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot update a request with status '{access_request.status}'",
+        )
+
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    for field, value in update_dict.items():
+        if hasattr(access_request, field):
+            setattr(access_request, field, value)
+
+    await db.commit()
+    await db.refresh(access_request)
+    return access_request
+
+
+@router.post("/{request_id}/withdraw", response_model=VMAccessRequestResponse)
+async def withdraw_vm_access_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMAccessRequestModel:
+    """Withdraw a VM access request. Only allowed when status is not completed."""
+    query = select(VMAccessRequestModel).where(VMAccessRequestModel.id == request_id)
+    result = await db.execute(query)
+    access_request = result.scalar_one_or_none()
+
+    if not access_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="VM access request not found",
+        )
+    if access_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    if access_request.status not in WITHDRAWABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot withdraw a request with status '{access_request.status}'",
+        )
+
+    access_request.status = RequestStatus.WITHDRAWN
+    await db.commit()
+    await db.refresh(access_request)
+    return access_request
+
+
+@router.post("/{request_id}/reopen", response_model=VMAccessRequestResponse)
+async def reopen_vm_access_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMAccessRequestModel:
+    """Reopen a withdrawn VM access request. Sets status back to OPEN."""
+    query = select(VMAccessRequestModel).where(VMAccessRequestModel.id == request_id)
+    result = await db.execute(query)
+    access_request = result.scalar_one_or_none()
+
+    if not access_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="VM access request not found",
+        )
+    if access_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    if access_request.status != RequestStatus.WITHDRAWN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Can only reopen withdrawn requests",
+        )
+
+    access_request.status = RequestStatus.OPEN
+    await db.commit()
+    await db.refresh(access_request)
     return access_request

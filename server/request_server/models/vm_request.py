@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from request_server.db.base import Base, TimestampMixin
+from request_server.models.request_status import RequestStatus
 
 
 class ProjectType(enum.StrEnum):
@@ -18,14 +19,6 @@ class ProjectType(enum.StrEnum):
 class StudyLevel(enum.StrEnum):
     BA = "BA"
     MA = "MA"
-
-
-class RequestStatus(enum.StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
 
 
 class VMRequest(Base, TimestampMixin):
@@ -81,9 +74,9 @@ class VMRequest(Base, TimestampMixin):
 
     # Request status
     status: Mapped[RequestStatus] = mapped_column(
-        Enum(RequestStatus),
+        Enum(RequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=RequestStatus.PENDING,
+        default=RequestStatus.OPEN,
     )
 
     # Admin fields

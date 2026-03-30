@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from request_server.db.base import Base, TimestampMixin
+from request_server.models.request_status import RequestStatus
 
 
 class SupportCategory(enum.StrEnum):
@@ -16,13 +17,6 @@ class SupportCategory(enum.StrEnum):
     FEATURE_REQUEST = "feature_request"
     QUESTION = "question"
     OTHER = "other"
-
-
-class SupportRequestStatus(enum.StrEnum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    RESOLVED = "resolved"
-    CLOSED = "closed"
 
 
 class SupportRequest(Base, TimestampMixin):
@@ -59,10 +53,10 @@ class SupportRequest(Base, TimestampMixin):
     )
 
     # Request status
-    status: Mapped[SupportRequestStatus] = mapped_column(
-        Enum(SupportRequestStatus, values_callable=lambda x: [e.value for e in x]),
+    status: Mapped[RequestStatus] = mapped_column(
+        Enum(RequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=SupportRequestStatus.PENDING,
+        default=RequestStatus.OPEN,
     )
 
     # Admin fields

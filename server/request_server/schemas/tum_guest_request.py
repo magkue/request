@@ -15,6 +15,7 @@ from pydantic import (
 )
 
 from request_server.core.config import settings
+from request_server.models.request_status import RequestStatus
 
 
 class GuestType(StrEnum):
@@ -27,13 +28,6 @@ class Gender(StrEnum):
     MALE = "male"
     FEMALE = "female"
     DIVERSE = "diverse"
-
-
-class GuestRequestStatus(StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
 
 
 # Guest type specific details
@@ -161,7 +155,7 @@ class TUMGuestRequestResponse(BaseModel):
     additional_comments: str | None
 
     # Status
-    status: GuestRequestStatus
+    status: RequestStatus
 
     # Requester info (if authenticated)
     requester_username: str | None
@@ -181,6 +175,41 @@ class TUMGuestRequestResponse(BaseModel):
         return settings.ticket_url(self.ticket_key)
 
 
+class TUMGuestRequestUpdate(BaseModel):
+    """Schema for updating a TUM guest request (PATCH). All fields optional."""
+
+    first_name: str | None = Field(None, min_length=1, alias="firstName")
+    last_name: str | None = Field(None, min_length=1, alias="lastName")
+    email: EmailStr | None = None
+    birth_date: date | None = Field(None, alias="birthDate")
+    gender: Gender | None = None
+    nationality: str | None = Field(None, min_length=1)
+    guest_type: GuestType | None = Field(None, alias="guestType")
+    ipraktikum_fields: IPraktikumDetails | None = Field(None, alias="ipraktikumFields")
+    artemis_fields: ArtemisDetails | None = Field(None, alias="artemisFields")
+    other_fields: OtherDetails | None = Field(None, alias="otherFields")
+    contact_person: str | None = Field(None, alias="contactPerson")
+    additional_comments: str | None = Field(None, alias="additionalComments")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_birth_date(cls, v: date | None) -> date | None:
+        if v is None:
+            return v
+        from datetime import date as date_type
+
+        today = date_type.today()
+        min_age_date = date_type(today.year - 16, today.month, today.day)
+
+        if v > min_age_date:
+            raise ValueError("Guest must be at least 16 years old")
+        if v < date_type(1900, 1, 1):
+            raise ValueError("Invalid birth date")
+        return v
+
+
 class TUMGuestRequestListResponse(BaseModel):
     """Schema for TUM guest request list response."""
 
@@ -189,7 +218,7 @@ class TUMGuestRequestListResponse(BaseModel):
     guest_last_name: str
     guest_email: str
     guest_type: GuestType
-    status: GuestRequestStatus
+    status: RequestStatus
     requester_username: str | None
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
     created_at: datetime

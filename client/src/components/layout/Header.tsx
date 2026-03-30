@@ -1,4 +1,11 @@
-import { LogIn, LogOut, Settings, Shield, User } from "lucide-react";
+import {
+  ClipboardList,
+  LogIn,
+  LogOut,
+  Settings,
+  Shield,
+  User,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import AETLogo from "@/assets/Logo_AET_schwarz_512x512.svg";
 import { Button } from "@/components/ui/button";
@@ -31,6 +38,12 @@ export function Header() {
         {/* Auth Section */}
         {isAuthenticated && user ? (
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/my-requests">
+                <ClipboardList className="mr-2 h-4 w-4" />
+                My Requests
+              </Link>
+            </Button>
             {user.isAdmin && (
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/admin/external-links">

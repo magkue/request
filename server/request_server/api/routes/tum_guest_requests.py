@@ -11,6 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from request_server.core.config import settings
 from request_server.core.security import CurrentUser, get_current_user, get_optional_current_user
 from request_server.db.session import get_db
+from request_server.models.request_status import (
+    EDITABLE_STATUSES,
+    WITHDRAWABLE_STATUSES,
+    RequestStatus,
+)
 from request_server.models.tum_guest_request import Gender as GenderModel
 from request_server.models.tum_guest_request import GuestType as GuestTypeModel
 from request_server.models.tum_guest_request import TUMGuestRequest as TUMGuestRequestModel
@@ -23,6 +28,7 @@ from request_server.schemas.tum_guest_request import (
     TUMGuestRequestCreateAuthenticated,
     TUMGuestRequestListResponse,
     TUMGuestRequestResponse,
+    TUMGuestRequestUpdate,
 )
 from request_server.services.descriptions.tum_guest_request import (
     handle_tum_guest_ticket_creation,
@@ -181,4 +187,130 @@ async def get_tum_guest_request(
             detail="Not authorized to view this request",
         )
 
+    return guest_request
+
+
+@router.patch("/{request_id}", response_model=TUMGuestRequestResponse)
+async def update_tum_guest_request(
+    request_id: uuid.UUID,
+    update_data: TUMGuestRequestUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TUMGuestRequestModel:
+    """Update a TUM guest request. Only allowed when status is editable."""
+    query = select(TUMGuestRequestModel).where(TUMGuestRequestModel.id == request_id)
+    result = await db.execute(query)
+    guest_request = result.scalar_one_or_none()
+
+    if not guest_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="TUM guest request not found"
+        )
+    if guest_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if guest_request.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot update a request with status '{guest_request.status}'",
+        )
+
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    # Handle nested transforms: guest_type -> guest_type_details
+    if "guest_type" in update_dict:
+        guest_type_details = _extract_guest_type_details(
+            update_data.guest_type,
+            update_data.ipraktikum_fields,
+            update_data.artemis_fields,
+            update_data.other_fields,
+        )
+        guest_request.guest_type_details = guest_type_details
+        update_dict.pop("ipraktikum_fields", None)
+        update_dict.pop("artemis_fields", None)
+        update_dict.pop("other_fields", None)
+        guest_request.guest_type = GuestTypeModel(update_dict.pop("guest_type"))
+    else:
+        update_dict.pop("ipraktikum_fields", None)
+        update_dict.pop("artemis_fields", None)
+        update_dict.pop("other_fields", None)
+
+    # Map schema field names to model field names
+    if "first_name" in update_dict:
+        guest_request.guest_first_name = update_dict.pop("first_name")
+    if "last_name" in update_dict:
+        guest_request.guest_last_name = update_dict.pop("last_name")
+    if "email" in update_dict:
+        guest_request.guest_email = update_dict.pop("email")
+    if "birth_date" in update_dict:
+        guest_request.guest_birth_date = update_dict.pop("birth_date")
+    if "gender" in update_dict:
+        guest_request.guest_gender = GenderModel(update_dict.pop("gender"))
+    if "nationality" in update_dict:
+        guest_request.guest_nationality = update_dict.pop("nationality")
+
+    # Apply remaining simple fields (contact_person, additional_comments)
+    for field, value in update_dict.items():
+        if hasattr(guest_request, field):
+            setattr(guest_request, field, value)
+
+    await db.commit()
+    await db.refresh(guest_request)
+    return guest_request
+
+
+@router.post("/{request_id}/withdraw", response_model=TUMGuestRequestResponse)
+async def withdraw_tum_guest_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TUMGuestRequestModel:
+    """Withdraw a TUM guest request. Only allowed when status is not completed."""
+    query = select(TUMGuestRequestModel).where(TUMGuestRequestModel.id == request_id)
+    result = await db.execute(query)
+    guest_request = result.scalar_one_or_none()
+
+    if not guest_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="TUM guest request not found"
+        )
+    if guest_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if guest_request.status not in WITHDRAWABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot withdraw a request with status '{guest_request.status}'",
+        )
+
+    guest_request.status = RequestStatus.WITHDRAWN
+    await db.commit()
+    await db.refresh(guest_request)
+    return guest_request
+
+
+@router.post("/{request_id}/reopen", response_model=TUMGuestRequestResponse)
+async def reopen_tum_guest_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TUMGuestRequestModel:
+    """Reopen a withdrawn TUM guest request. Sets status back to OPEN."""
+    query = select(TUMGuestRequestModel).where(TUMGuestRequestModel.id == request_id)
+    result = await db.execute(query)
+    guest_request = result.scalar_one_or_none()
+
+    if not guest_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="TUM guest request not found"
+        )
+    if guest_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if guest_request.status != RequestStatus.WITHDRAWN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Can only reopen withdrawn requests",
+        )
+
+    guest_request.status = RequestStatus.OPEN
+    await db.commit()
+    await db.refresh(guest_request)
     return guest_request

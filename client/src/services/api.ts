@@ -92,6 +92,14 @@ export const api = {
     return response.json();
   },
 
+  patch: async <T>(endpoint: string, data: unknown): Promise<T> => {
+    const response = await fetchWithAuth(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
   put: async <T>(endpoint: string, data: unknown): Promise<T> => {
     const response = await fetchWithAuth(endpoint, {
       method: "PUT",

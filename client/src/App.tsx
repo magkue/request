@@ -5,6 +5,7 @@ import { AboutPage } from "@/pages/AboutPage";
 import { ArtemisRequestPage } from "@/pages/ArtemisRequestPage";
 import { ExternalLinksAdminPage } from "@/pages/ExternalLinksAdminPage";
 import { ImprintPage } from "@/pages/ImprintPage";
+import { MyRequestsPage } from "@/pages/MyRequestsPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { StartPage } from "@/pages/StartPage";
 import { SupportRequestPage } from "@/pages/SupportRequestPage";
@@ -23,6 +24,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <VMRequestPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-requests"
+            element={
+              <ProtectedRoute>
+                <MyRequestsPage />
               </ProtectedRoute>
             }
           />

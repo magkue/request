@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from request_server.db.base import Base, TimestampMixin
+from request_server.models.request_status import RequestStatus
 
 
 class GuestType(enum.StrEnum):
@@ -21,13 +22,6 @@ class Gender(enum.StrEnum):
     MALE = "male"
     FEMALE = "female"
     DIVERSE = "diverse"
-
-
-class GuestRequestStatus(enum.StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
 
 
 class TUMGuestRequest(Base, TimestampMixin):
@@ -78,10 +72,10 @@ class TUMGuestRequest(Base, TimestampMixin):
     additional_comments: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Request status
-    status: Mapped[GuestRequestStatus] = mapped_column(
-        Enum(GuestRequestStatus, values_callable=lambda x: [e.value for e in x]),
+    status: Mapped[RequestStatus] = mapped_column(
+        Enum(RequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=GuestRequestStatus.PENDING,
+        default=RequestStatus.OPEN,
     )
 
     # Admin fields

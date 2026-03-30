@@ -1,6 +1,5 @@
 """Artemis Developer Access Request database model."""
 
-import enum
 import uuid
 from datetime import datetime
 
@@ -9,13 +8,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from request_server.db.base import Base, TimestampMixin
-
-
-class ArtemisRequestStatus(enum.StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
+from request_server.models.request_status import RequestStatus
 
 
 class ArtemisDeveloperRequest(Base, TimestampMixin):
@@ -63,10 +56,10 @@ class ArtemisDeveloperRequest(Base, TimestampMixin):
     additional_comments: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Request status
-    status: Mapped[ArtemisRequestStatus] = mapped_column(
-        Enum(ArtemisRequestStatus, values_callable=lambda x: [e.value for e in x]),
+    status: Mapped[RequestStatus] = mapped_column(
+        Enum(RequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=ArtemisRequestStatus.PENDING,
+        default=RequestStatus.OPEN,
     )
 
     # Admin fields

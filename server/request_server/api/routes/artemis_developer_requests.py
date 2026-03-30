@@ -14,11 +14,17 @@ from request_server.db.session import get_db
 from request_server.models.artemis_developer_request import (
     ArtemisDeveloperRequest as ArtemisDeveloperRequestModel,
 )
+from request_server.models.request_status import (
+    EDITABLE_STATUSES,
+    WITHDRAWABLE_STATUSES,
+    RequestStatus,
+)
 from request_server.schemas.artemis_developer_request import (
     ArtemisDeveloperRequestCreateAnonymous,
     ArtemisDeveloperRequestCreateAuthenticated,
     ArtemisDeveloperRequestListResponse,
     ArtemisDeveloperRequestResponse,
+    ArtemisDeveloperRequestUpdate,
 )
 from request_server.services.descriptions.artemis_developer_request import (
     handle_artemis_ticket_creation,
@@ -164,4 +170,107 @@ async def get_artemis_developer_request(
             detail="Not authorized to view this request",
         )
 
+    return artemis_request
+
+
+@router.patch("/{request_id}", response_model=ArtemisDeveloperRequestResponse)
+async def update_artemis_developer_request(
+    request_id: uuid.UUID,
+    update_data: ArtemisDeveloperRequestUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ArtemisDeveloperRequestModel:
+    """Update an Artemis developer request. Only allowed when status is editable."""
+    query = select(ArtemisDeveloperRequestModel).where(
+        ArtemisDeveloperRequestModel.id == request_id
+    )
+    result = await db.execute(query)
+    artemis_request = result.scalar_one_or_none()
+
+    if not artemis_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artemis developer request not found",
+        )
+    if artemis_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if artemis_request.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot update a request with status '{artemis_request.status}'",
+        )
+
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    # Apply simple fields
+    for field, value in update_dict.items():
+        if hasattr(artemis_request, field):
+            setattr(artemis_request, field, value)
+
+    await db.commit()
+    await db.refresh(artemis_request)
+    return artemis_request
+
+
+@router.post("/{request_id}/withdraw", response_model=ArtemisDeveloperRequestResponse)
+async def withdraw_artemis_developer_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ArtemisDeveloperRequestModel:
+    """Withdraw an Artemis developer request. Only allowed when status is not completed."""
+    query = select(ArtemisDeveloperRequestModel).where(
+        ArtemisDeveloperRequestModel.id == request_id
+    )
+    result = await db.execute(query)
+    artemis_request = result.scalar_one_or_none()
+
+    if not artemis_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artemis developer request not found",
+        )
+    if artemis_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if artemis_request.status not in WITHDRAWABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot withdraw a request with status '{artemis_request.status}'",
+        )
+
+    artemis_request.status = RequestStatus.WITHDRAWN
+    await db.commit()
+    await db.refresh(artemis_request)
+    return artemis_request
+
+
+@router.post("/{request_id}/reopen", response_model=ArtemisDeveloperRequestResponse)
+async def reopen_artemis_developer_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ArtemisDeveloperRequestModel:
+    """Reopen a withdrawn Artemis developer request. Sets status back to OPEN."""
+    query = select(ArtemisDeveloperRequestModel).where(
+        ArtemisDeveloperRequestModel.id == request_id
+    )
+    result = await db.execute(query)
+    artemis_request = result.scalar_one_or_none()
+
+    if not artemis_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artemis developer request not found",
+        )
+    if artemis_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if artemis_request.status != RequestStatus.WITHDRAWN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Can only reopen withdrawn requests",
+        )
+
+    artemis_request.status = RequestStatus.OPEN
+    await db.commit()
+    await db.refresh(artemis_request)
     return artemis_request

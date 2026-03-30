@@ -66,4 +66,25 @@ export const supportRequestsService = {
   get: async (id: string): Promise<SupportRequestResponse> => {
     return api.get<SupportRequestResponse>(`/support-requests/${id}`);
   },
+
+  update: async (
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<SupportRequestResponse> => {
+    return api.patch<SupportRequestResponse>(`/support-requests/${id}`, data);
+  },
+
+  withdraw: async (id: string): Promise<SupportRequestResponse> => {
+    return api.post<SupportRequestResponse>(
+      `/support-requests/${id}/withdraw`,
+      {},
+    );
+  },
+
+  reopen: async (id: string): Promise<SupportRequestResponse> => {
+    return api.post<SupportRequestResponse>(
+      `/support-requests/${id}/reopen`,
+      {},
+    );
+  },
 };

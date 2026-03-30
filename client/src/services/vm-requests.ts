@@ -46,4 +46,19 @@ export const vmRequestsService = {
   get: async (id: string): Promise<VMRequestResponse> => {
     return api.get<VMRequestResponse>(`/vm-requests/${id}`);
   },
+
+  update: async (
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<VMRequestResponse> => {
+    return api.patch<VMRequestResponse>(`/vm-requests/${id}`, data);
+  },
+
+  withdraw: async (id: string): Promise<VMRequestResponse> => {
+    return api.post<VMRequestResponse>(`/vm-requests/${id}/withdraw`, {});
+  },
+
+  reopen: async (id: string): Promise<VMRequestResponse> => {
+    return api.post<VMRequestResponse>(`/vm-requests/${id}/reopen`, {});
+  },
 };

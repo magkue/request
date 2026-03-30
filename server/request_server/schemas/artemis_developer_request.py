@@ -2,19 +2,11 @@
 
 import uuid
 from datetime import datetime
-from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
 from request_server.core.config import settings
-
-
-class ArtemisRequestStatus(StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
-
+from request_server.models.request_status import RequestStatus
 
 # Valid subteam options
 VALID_SUBTEAMS = [
@@ -159,7 +151,7 @@ class ArtemisDeveloperRequestResponse(BaseModel):
     additional_comments: str | None
 
     # Status
-    status: ArtemisRequestStatus
+    status: RequestStatus
 
     # Ticket
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
@@ -176,6 +168,29 @@ class ArtemisDeveloperRequestResponse(BaseModel):
         return settings.ticket_url(self.ticket_key)
 
 
+class ArtemisDeveloperRequestUpdate(BaseModel):
+    """Schema for updating an Artemis developer request (PATCH). All fields optional."""
+
+    slack_email: EmailStr | None = Field(None, alias="slackEmail")
+    contact_person: str | None = Field(None, min_length=1, alias="contactPerson")
+    advisor: str | None = Field(None, min_length=1)
+    subteams: list[str] | None = Field(None, min_length=1)
+    other_subteam: str | None = Field(None, alias="otherSubteam")
+    additional_comments: str | None = Field(None, alias="additionalComments")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("subteams")
+    @classmethod
+    def validate_subteams(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        for subteam in v:
+            if subteam not in VALID_SUBTEAMS:
+                raise ValueError(f"Invalid subteam: {subteam}")
+        return v
+
+
 class ArtemisDeveloperRequestListResponse(BaseModel):
     """Schema for Artemis developer request list response."""
 
@@ -187,7 +202,7 @@ class ArtemisDeveloperRequestListResponse(BaseModel):
     github_avatar_url: str | None
     slack_email: str
     subteams: list[str]
-    status: ArtemisRequestStatus
+    status: RequestStatus
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
     created_at: datetime
 

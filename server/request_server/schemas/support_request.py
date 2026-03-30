@@ -7,6 +7,7 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
 
 from request_server.core.config import settings
+from request_server.models.request_status import RequestStatus
 
 
 class SupportCategory(StrEnum):
@@ -14,13 +15,6 @@ class SupportCategory(StrEnum):
     FEATURE_REQUEST = "feature_request"
     QUESTION = "question"
     OTHER = "other"
-
-
-class SupportRequestStatus(StrEnum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    RESOLVED = "resolved"
-    CLOSED = "closed"
 
 
 CATEGORY_LABELS = {
@@ -78,7 +72,7 @@ class SupportRequestResponse(BaseModel):
     category: SupportCategory
 
     # Status
-    status: SupportRequestStatus
+    status: RequestStatus
 
     # Ticket
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
@@ -95,6 +89,16 @@ class SupportRequestResponse(BaseModel):
         return settings.ticket_url(self.ticket_key)
 
 
+class SupportRequestUpdate(BaseModel):
+    """Schema for updating a support request (PATCH). All fields optional."""
+
+    subject: str | None = Field(None, min_length=5, max_length=255)
+    description: str | None = Field(None, min_length=10)
+    category: SupportCategory | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class SupportRequestListResponse(BaseModel):
     """Schema for support request list response."""
 
@@ -104,7 +108,7 @@ class SupportRequestListResponse(BaseModel):
     anonymous_name: str | None
     subject: str
     category: SupportCategory
-    status: SupportRequestStatus
+    status: RequestStatus
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
     created_at: datetime
 

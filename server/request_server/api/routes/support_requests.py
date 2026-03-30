@@ -11,6 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from request_server.core.config import settings
 from request_server.core.security import CurrentUser, get_current_user, get_optional_current_user
 from request_server.db.session import get_db
+from request_server.models.request_status import (
+    EDITABLE_STATUSES,
+    WITHDRAWABLE_STATUSES,
+    RequestStatus,
+)
 from request_server.models.support_request import (
     SupportRequest as SupportRequestModel,
 )
@@ -19,6 +24,7 @@ from request_server.schemas.support_request import (
     SupportRequestCreateAuthenticated,
     SupportRequestListResponse,
     SupportRequestResponse,
+    SupportRequestUpdate,
 )
 from request_server.services.descriptions.support_request import (
     handle_support_ticket_creation,
@@ -140,4 +146,98 @@ async def get_support_request(
             detail="Not authorized to view this request",
         )
 
+    return support_request
+
+
+@router.patch("/{request_id}", response_model=SupportRequestResponse)
+async def update_support_request(
+    request_id: uuid.UUID,
+    update_data: SupportRequestUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SupportRequestModel:
+    """Update a support request. Only allowed when status is editable."""
+    query = select(SupportRequestModel).where(SupportRequestModel.id == request_id)
+    result = await db.execute(query)
+    support_request = result.scalar_one_or_none()
+
+    if not support_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Support request not found"
+        )
+    if support_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if support_request.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot update a request with status '{support_request.status}'",
+        )
+
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    # Apply simple fields
+    for field, value in update_dict.items():
+        if hasattr(support_request, field):
+            setattr(support_request, field, value)
+
+    await db.commit()
+    await db.refresh(support_request)
+    return support_request
+
+
+@router.post("/{request_id}/withdraw", response_model=SupportRequestResponse)
+async def withdraw_support_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SupportRequestModel:
+    """Withdraw a support request. Only allowed when status is not completed."""
+    query = select(SupportRequestModel).where(SupportRequestModel.id == request_id)
+    result = await db.execute(query)
+    support_request = result.scalar_one_or_none()
+
+    if not support_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Support request not found"
+        )
+    if support_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if support_request.status not in WITHDRAWABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot withdraw a request with status '{support_request.status}'",
+        )
+
+    support_request.status = RequestStatus.WITHDRAWN
+    await db.commit()
+    await db.refresh(support_request)
+    return support_request
+
+
+@router.post("/{request_id}/reopen", response_model=SupportRequestResponse)
+async def reopen_support_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SupportRequestModel:
+    """Reopen a withdrawn support request. Sets status back to OPEN."""
+    query = select(SupportRequestModel).where(SupportRequestModel.id == request_id)
+    result = await db.execute(query)
+    support_request = result.scalar_one_or_none()
+
+    if not support_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Support request not found"
+        )
+    if support_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if support_request.status != RequestStatus.WITHDRAWN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Can only reopen withdrawn requests",
+        )
+
+    support_request.status = RequestStatus.OPEN
+    await db.commit()
+    await db.refresh(support_request)
     return support_request

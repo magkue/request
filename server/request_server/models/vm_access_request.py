@@ -1,6 +1,5 @@
 """VM Access Request database model."""
 
-import enum
 import uuid
 from datetime import datetime
 
@@ -9,13 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from request_server.db.base import Base, TimestampMixin
-
-
-class AccessRequestStatus(enum.StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
+from request_server.models.request_status import RequestStatus
 
 
 class VMAccessRequest(Base, TimestampMixin):
@@ -47,10 +40,10 @@ class VMAccessRequest(Base, TimestampMixin):
     ssh_key_value: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Request status
-    status: Mapped[AccessRequestStatus] = mapped_column(
-        Enum(AccessRequestStatus),
+    status: Mapped[RequestStatus] = mapped_column(
+        Enum(RequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=AccessRequestStatus.PENDING,
+        default=RequestStatus.OPEN,
     )
 
     # Admin fields

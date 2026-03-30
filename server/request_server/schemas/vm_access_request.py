@@ -3,19 +3,12 @@
 import re
 import uuid
 from datetime import datetime
-from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from request_server.core.config import settings
-
-
-class AccessRequestStatus(StrEnum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    COMPLETED = "completed"
+from request_server.models.request_status import RequestStatus
 
 
 # SSH Key configuration (same as VM request)
@@ -66,7 +59,7 @@ class VMAccessRequestResponse(BaseModel):
     justification: str
     contact_person: str | None
     ssh_key_type: str
-    status: AccessRequestStatus
+    status: RequestStatus
     requester_username: str
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
     created_at: datetime
@@ -81,12 +74,34 @@ class VMAccessRequestResponse(BaseModel):
         return settings.ticket_url(self.ticket_key)
 
 
+class VMAccessRequestUpdate(BaseModel):
+    """Schema for updating a VM access request (PATCH). All fields optional."""
+
+    hostname: str | None = Field(None, min_length=1, max_length=63)
+    justification: str | None = Field(None, min_length=10)
+    contact_person: str | None = Field(None, alias="contactPerson")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("hostname")
+    @classmethod
+    def validate_hostname(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        pattern = r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+        if not re.match(pattern, v):
+            raise ValueError(
+                "Hostname must be lowercase alphanumeric with hyphens, no leading/trailing hyphens"
+            )
+        return v
+
+
 class VMAccessRequestListResponse(BaseModel):
     """Schema for VM access request list response."""
 
     id: uuid.UUID
     hostname: str
-    status: AccessRequestStatus
+    status: RequestStatus
     requester_username: str
     ticket_key: str | None = Field(validation_alias="jira_ticket_key")
     created_at: datetime

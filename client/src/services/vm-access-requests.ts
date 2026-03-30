@@ -38,4 +38,28 @@ export const vmAccessRequestsService = {
   get: async (id: string): Promise<VMAccessRequestResponse> => {
     return api.get<VMAccessRequestResponse>(`/vm-access-requests/${id}`);
   },
+
+  update: async (
+    id: string,
+    data: Record<string, unknown>,
+  ): Promise<VMAccessRequestResponse> => {
+    return api.patch<VMAccessRequestResponse>(
+      `/vm-access-requests/${id}`,
+      data,
+    );
+  },
+
+  withdraw: async (id: string): Promise<VMAccessRequestResponse> => {
+    return api.post<VMAccessRequestResponse>(
+      `/vm-access-requests/${id}/withdraw`,
+      {},
+    );
+  },
+
+  reopen: async (id: string): Promise<VMAccessRequestResponse> => {
+    return api.post<VMAccessRequestResponse>(
+      `/vm-access-requests/${id}/reopen`,
+      {},
+    );
+  },
 };

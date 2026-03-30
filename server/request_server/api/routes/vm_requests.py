@@ -10,6 +10,11 @@ from request_server.api.routes.ssh_keys import parse_ssh_key
 from request_server.core.config import settings
 from request_server.core.security import CurrentUser, get_current_user
 from request_server.db.session import get_db
+from request_server.models.request_status import (
+    EDITABLE_STATUSES,
+    WITHDRAWABLE_STATUSES,
+    RequestStatus,
+)
 from request_server.models.ssh_key import SSHKey
 from request_server.models.vm_request import ProjectType as DBProjectType
 from request_server.models.vm_request import VMRequest as VMRequestModel
@@ -20,6 +25,7 @@ from request_server.schemas.vm_request import (
     VMRequestCreate,
     VMRequestListResponse,
     VMRequestResponse,
+    VMRequestUpdate,
 )
 from request_server.services.descriptions.vm_request import handle_vm_ticket_creation
 from request_server.services.ticket import get_ticket_service
@@ -198,4 +204,125 @@ async def get_vm_request(
             detail="Not authorized to view this request",
         )
 
+    return vm_request
+
+
+@router.patch("/{request_id}", response_model=VMRequestResponse)
+async def update_vm_request(
+    request_id: uuid.UUID,
+    update_data: VMRequestUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMRequestModel:
+    """Update a VM request. Only allowed when status is editable."""
+    query = select(VMRequestModel).where(VMRequestModel.id == request_id)
+    result = await db.execute(query)
+    vm_request = result.scalar_one_or_none()
+
+    if not vm_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VM request not found")
+    if vm_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if vm_request.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot update a request with status '{vm_request.status}'",
+        )
+
+    update_dict = update_data.model_dump(exclude_unset=True)
+
+    # Handle nested transforms: resources -> cpu_cores/ram_gb
+    if "resources" in update_dict and update_dict["resources"] is not None:
+        res = update_dict.pop("resources")
+        vm_request.cpu_cores = res["cpu_cores"]
+        vm_request.ram_gb = res["ram_gb"]
+        vm_request.resource_justification = res.get("justification")
+
+    # Handle nested transforms: firewall -> default_ports_enabled/additional_ports
+    if "firewall" in update_dict and update_dict["firewall"] is not None:
+        fw = update_dict.pop("firewall")
+        vm_request.default_ports_enabled = fw["default_ports"]
+        vm_request.additional_ports = fw.get("additional_ports", [])
+
+    # Handle project details transform
+    if "project_type" in update_dict and update_dict["project_type"] is not None:
+        # Re-extract project details using the update data
+        pt = update_dict.pop("project_type")
+        vm_request.project_type = DBProjectType(pt)
+        ipraktikum = update_dict.pop("ipraktikum", None)
+        thesis = update_dict.pop("thesis", None)
+        chair_project = update_dict.pop("chair_project", None)
+        if pt == "ipraktikum" and ipraktikum:
+            vm_request.project_details = ipraktikum
+        elif pt == "thesis" and thesis:
+            vm_request.project_details = thesis
+        elif pt == "chair_project" and chair_project:
+            vm_request.project_details = chair_project
+    else:
+        # Remove sub-detail fields if project_type wasn't changed
+        update_dict.pop("ipraktikum", None)
+        update_dict.pop("thesis", None)
+        update_dict.pop("chair_project", None)
+
+    # Apply remaining simple fields
+    for field, value in update_dict.items():
+        if hasattr(vm_request, field):
+            setattr(vm_request, field, value)
+
+    await db.commit()
+    await db.refresh(vm_request)
+    return vm_request
+
+
+@router.post("/{request_id}/withdraw", response_model=VMRequestResponse)
+async def withdraw_vm_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMRequestModel:
+    """Withdraw a VM request. Only allowed when status is not completed."""
+    query = select(VMRequestModel).where(VMRequestModel.id == request_id)
+    result = await db.execute(query)
+    vm_request = result.scalar_one_or_none()
+
+    if not vm_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VM request not found")
+    if vm_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if vm_request.status not in WITHDRAWABLE_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot withdraw a request with status '{vm_request.status}'",
+        )
+
+    vm_request.status = RequestStatus.WITHDRAWN
+    await db.commit()
+    await db.refresh(vm_request)
+    return vm_request
+
+
+@router.post("/{request_id}/reopen", response_model=VMRequestResponse)
+async def reopen_vm_request(
+    request_id: uuid.UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VMRequestModel:
+    """Reopen a withdrawn VM request. Sets status back to OPEN."""
+    query = select(VMRequestModel).where(VMRequestModel.id == request_id)
+    result = await db.execute(query)
+    vm_request = result.scalar_one_or_none()
+
+    if not vm_request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="VM request not found")
+    if vm_request.requester_id != current_user.id and not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if vm_request.status != RequestStatus.WITHDRAWN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Can only reopen withdrawn requests",
+        )
+
+    vm_request.status = RequestStatus.OPEN
+    await db.commit()
+    await db.refresh(vm_request)
     return vm_request
