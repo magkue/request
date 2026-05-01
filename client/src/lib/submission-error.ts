@@ -64,6 +64,7 @@ async function submitReport(options: SubmissionErrorOptions) {
       category: "bug",
     };
   } else {
+    isReporting = false;
     toast.error("Could not submit report", {
       description: "Please sign in or contact support directly.",
     });
