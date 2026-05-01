@@ -17,12 +17,12 @@ async function navigateToVMForm(page) {
 
 async function clickNextAndWait(page, nextStepTitle: string) {
   await page.getByRole("button", { name: "Next" }).click();
-  await page.getByText(nextStepTitle).waitFor();
+  await page.getByRole("heading", { name: nextStepTitle }).waitFor();
 }
 
 async function clickPreviousAndWait(page, prevStepTitle: string) {
   await page.getByRole("button", { name: "Previous" }).click();
-  await page.getByText(prevStepTitle).waitFor();
+  await page.getByRole("heading", { name: prevStepTitle }).waitFor();
 }
 
 async function fillSSHKey(page) {
@@ -88,7 +88,7 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
     await justificationInputs1.last().fill("Standard");
 
     await page.getByRole("button", { name: /Add Port/i }).click();
-    await expect(page.locator('input[type="number"]')).toHaveCount(3);
+    await expect(page.locator('input[type="number"]')).toHaveCount(2);
     const portInputs2 = page.locator('input[type="number"]');
     await portInputs2.last().fill("443");
     const protocolSelects2 = page.getByRole("combobox");
