@@ -120,12 +120,15 @@ export function handleSubmissionFailure(
   let description: string;
   if (isCaughtError) {
     description = "An unexpected error occurred. Please try again later.";
-  } else if (failure.statusCode && failure.statusCode >= 400 && failure.statusCode < 500) {
+  } else if (
+    failure.statusCode &&
+    failure.statusCode >= 400 &&
+    failure.statusCode < 500
+  ) {
     description =
       "Please review your data and try again. If the problem persists, contact support.";
   } else {
-    description =
-      "Our server ran into a problem. Please try again later.";
+    description = "Our server ran into a problem. Please try again later.";
   }
 
   const contactInfo = isAuthenticated
