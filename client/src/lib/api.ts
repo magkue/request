@@ -62,8 +62,19 @@ export async function submitVMRequest(
   request: VMRequestSubmission,
 ): Promise<APIResponse<{ requestId: string; ticketUrl: string | null }>> {
   try {
-    // Extract just the VMRequest data (without user info which server gets from token)
-    const { user: _user, ...vmRequestData } = request;
+    const { user: _user, ipraktikum, thesis, chairProject, ...rest } = request;
+    const projectDetailsKey = {
+      ipraktikum: "ipraktikum",
+      thesis: "thesis",
+      chair_project: "chairProject",
+    }[rest.projectType] as "ipraktikum" | "thesis" | "chairProject";
+    const projectDetails = { ipraktikum, thesis, chairProject }[
+      projectDetailsKey
+    ];
+    const vmRequestData = {
+      ...rest,
+      ...(projectDetails && { [projectDetailsKey]: projectDetails }),
+    };
     const response = await vmRequestsService.create(vmRequestData);
     return {
       success: true,

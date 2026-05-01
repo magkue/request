@@ -74,7 +74,8 @@ async function submitReport(options: SubmissionErrorOptions) {
       ...(ticket_url && {
         action: {
           label: "View Ticket",
-          onClick: () => window.open(ticket_url, "_blank"),
+          onClick: () =>
+            window.open(ticket_url, "_blank", "noopener,noreferrer"),
         },
       }),
     });
