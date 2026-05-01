@@ -36,6 +36,7 @@ client:
     VITE_ADMIN_ROLE: admin
     VITE_ENVIRONMENT: production
     VITE_WHATS_NEW_ENABLED: "true"
+    VITE_GITHUB_URL: ""
 
 server:
   replicaCount: 2

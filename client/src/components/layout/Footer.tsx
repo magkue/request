@@ -1,6 +1,7 @@
+import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import { APP_VERSION } from "@/config/app";
+import { APP_VERSION, GITHUB_URL } from "@/config/app";
 
 const footerLinks = [
   { label: "About", to: "/about" },
@@ -9,6 +10,10 @@ const footerLinks = [
 ];
 
 export function Footer() {
+  const releaseUrl = GITHUB_URL
+    ? `${GITHUB_URL}/releases/tag/client-v${APP_VERSION}`
+    : undefined;
+
   return (
     <footer className="mt-auto border-t bg-muted/30">
       <div className="container mx-auto p-4">
@@ -28,7 +33,31 @@ export function Footer() {
               </div>
             ))}
           </nav>
-          <p className="text-sm text-muted-foreground">v{APP_VERSION}</p>
+          <div className="flex items-center gap-2">
+            {releaseUrl ? (
+              <a
+                href={releaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                v{APP_VERSION}
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">v{APP_VERSION}</p>
+            )}
+            {GITHUB_URL && (
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="GitHub repository"
+              >
+                <Github className="size-4" />
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </footer>

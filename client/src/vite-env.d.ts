@@ -10,6 +10,7 @@ type ImportMetaEnv = {
   VITE_KEYCLOAK_CLIENT_ID: string
   VITE_ADMIN_ROLE: string
   VITE_ENVIRONMENT: string
+  VITE_GITHUB_URL: string
   VITE_WHATS_NEW_ENABLED: string
   VITE_OTEL_COLLECTOR_URL: string
   VITE_OTEL_SERVICE_NAME: string

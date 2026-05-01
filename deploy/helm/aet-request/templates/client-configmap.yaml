@@ -13,3 +13,4 @@ data:
   VITE_ADMIN_ROLE: {{ .Values.client.config.VITE_ADMIN_ROLE | quote }}
   VITE_ENVIRONMENT: {{ .Values.client.config.VITE_ENVIRONMENT | quote }}
   VITE_WHATS_NEW_ENABLED: {{ .Values.client.config.VITE_WHATS_NEW_ENABLED | quote }}
+  VITE_GITHUB_URL: {{ .Values.client.config.VITE_GITHUB_URL | quote }}

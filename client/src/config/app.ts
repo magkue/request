@@ -7,3 +7,4 @@ export const APP_DESCRIPTION =
 export const APP_ENVIRONMENT = import.meta.env.VITE_ENVIRONMENT ?? "production";
 export const WHATS_NEW_ENABLED =
   import.meta.env.VITE_WHATS_NEW_ENABLED !== "false";
+export const GITHUB_URL: string | undefined = import.meta.env.VITE_GITHUB_URL;
