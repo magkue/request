@@ -50,6 +50,7 @@ export function VMAccessRequestPage() {
           setSubmitFailed,
           {
             apiError: response.error,
+            statusCode: response.statusCode,
           },
         );
       }

@@ -57,7 +57,7 @@ export function SupportRequestPage() {
           data,
           isAuthenticated,
           setSubmitFailed,
-          { apiError: response.error },
+          { apiError: response.error, statusCode: response.statusCode },
         );
       }
     } catch (error) {

@@ -58,7 +58,7 @@ export function TUMGuestRequestPage() {
           data,
           isAuthenticated,
           setSubmitFailed,
-          { apiError: response.error },
+          { apiError: response.error, statusCode: response.statusCode },
         );
       }
     } catch (error) {

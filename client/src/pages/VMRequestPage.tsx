@@ -45,6 +45,7 @@ export function VMRequestPage() {
       } else {
         handleSubmissionFailure("VM Request", data, true, setSubmitFailed, {
           apiError: response.error,
+          statusCode: response.statusCode,
         });
       }
     } catch (error) {

@@ -104,7 +104,9 @@ export function handleSubmissionFailure(
   formData: unknown,
   isAuthenticated: boolean,
   setSubmitFailed: (v: boolean) => void,
-  failure: { apiError?: string } | { caughtError: unknown },
+  failure:
+    | { apiError?: string; statusCode?: number }
+    | { caughtError: unknown },
 ) {
   setSubmitFailed(true);
 
@@ -115,16 +117,28 @@ export function handleSubmissionFailure(
       : "Unknown error"
     : failure.apiError;
 
+  let description: string;
+  if (isCaughtError) {
+    description = "An unexpected error occurred. Please try again later.";
+  } else if (failure.statusCode && failure.statusCode >= 400 && failure.statusCode < 500) {
+    description =
+      "Please review your data and try again. If the problem persists, contact support.";
+  } else {
+    description =
+      "Our server ran into a problem. Please try again later.";
+  }
+
   const contactInfo = isAuthenticated
     ? undefined
     : extractContactInfo(formType, formData as Record<string, unknown>);
 
-  showSubmissionError(
-    isCaughtError
-      ? "An unexpected error occurred. Please try again later."
-      : "Please review your data and try again. If the problem persists, contact support.",
-    { formType, formData, errorMessage, isAuthenticated, contactInfo },
-  );
+  showSubmissionError(description, {
+    formType,
+    formData,
+    errorMessage,
+    isAuthenticated,
+    contactInfo,
+  });
 }
 
 export function extractContactInfo(

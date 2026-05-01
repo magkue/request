@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { test, expect } from "../fixtures/auth";
 import { VM_REQUEST_CONFIGS } from "../fixtures/test-data";
 import { TEST_SSH_KEY_NAME, TEST_SSH_PUBLIC_KEY } from "../fixtures/test-data";
@@ -5,7 +6,7 @@ import { resetTestState, getLatestTicket } from "../helpers/debug-api";
 import { fillVMRequestForm } from "../helpers/form-fillers";
 import { SERVER_URL } from "../playwright.config";
 
-async function navigateToVMForm(page) {
+async function navigateToVMForm(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
   });
@@ -15,17 +16,17 @@ async function navigateToVMForm(page) {
   await page.getByText("Basic Information").waitFor();
 }
 
-async function clickNextAndWait(page, nextStepTitle: string) {
+async function clickNextAndWait(page: Page, nextStepTitle: string) {
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("heading", { name: nextStepTitle }).waitFor();
 }
 
-async function clickPreviousAndWait(page, prevStepTitle: string) {
+async function clickPreviousAndWait(page: Page, prevStepTitle: string) {
   await page.getByRole("button", { name: "Previous" }).click();
   await page.getByRole("heading", { name: prevStepTitle }).waitFor();
 }
 
-async function fillSSHKey(page) {
+async function fillSSHKey(page: Page) {
   await page.locator('label[for="new"]').click();
   await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
   await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);

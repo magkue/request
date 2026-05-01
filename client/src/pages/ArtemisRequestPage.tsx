@@ -61,7 +61,7 @@ export function ArtemisRequestPage() {
           data,
           isAuthenticated,
           setSubmitFailed,
-          { apiError: response.error },
+          { apiError: response.error, statusCode: response.statusCode },
         );
       }
     } catch (error) {
