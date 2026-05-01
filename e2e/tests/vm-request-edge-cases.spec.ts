@@ -368,9 +368,7 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
       timeout: 10000,
     });
     await expect(
-      page.getByText(
-        "Please review your data and try again. If the problem persists, contact support.",
-      ),
+      page.getByText("Our server ran into a problem. Please try again later."),
     ).toBeVisible();
 
     // Verify the form is still visible (review step should still be showing)
