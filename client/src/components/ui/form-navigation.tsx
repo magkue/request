@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, CircleX, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FormNavigationProps {
   currentStep: number;

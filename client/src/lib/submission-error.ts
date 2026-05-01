@@ -68,12 +68,13 @@ async function submitReport(options: SubmissionErrorOptions) {
 
   try {
     const response = await supportRequestsService.create(supportRequest);
+    const { ticket_url } = response;
     toast.success("Report submitted", {
       description: "Thank you — our team will investigate the issue.",
-      ...(response.ticket_url && {
+      ...(ticket_url && {
         action: {
           label: "View Ticket",
-          onClick: () => window.open(response.ticket_url!, "_blank"),
+          onClick: () => window.open(ticket_url, "_blank"),
         },
       }),
     });
