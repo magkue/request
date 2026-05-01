@@ -5,6 +5,33 @@ import { resetTestState, getLatestTicket } from "../helpers/debug-api";
 import { fillVMRequestForm } from "../helpers/form-fillers";
 import { SERVER_URL } from "../playwright.config";
 
+async function navigateToVMForm(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
+  });
+  await page.goto("/");
+  await page.getByText("Request Forms").waitFor({ timeout: 10000 });
+  await page.getByText("Request a New VM", { exact: true }).click();
+  await page.getByText("Basic Information").waitFor();
+}
+
+async function clickNextAndWait(page, nextStepTitle: string) {
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByText(nextStepTitle).waitFor();
+}
+
+async function clickPreviousAndWait(page, prevStepTitle: string) {
+  await page.getByRole("button", { name: "Previous" }).click();
+  await page.getByText(prevStepTitle).waitFor();
+}
+
+async function fillSSHKey(page) {
+  await page.locator('label[for="new"]').click();
+  await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
+  await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
+  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled({ timeout: 5000 });
+}
+
 test.describe("VM Request - Issue #1 Reproduction", () => {
   test.beforeEach(async ({ request }) => {
     await resetTestState(request);
@@ -14,13 +41,7 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
     authenticatedPage: page,
     request,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-    });
-    await page.goto("/");
-    await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-    await page.getByText("Request a New VM", { exact: true }).click();
-    await page.waitForTimeout(500);
+    await navigateToVMForm(page);
 
     // Step 1: Fill basic info - FIRST select thesis (like the user likely did)
     await page.getByPlaceholder("my-vm-name").fill("e2e-issue1-vm");
@@ -30,30 +51,27 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
 
     // Select thesis first and partially fill it
     await page.locator('label[for="thesis"]').click();
-    await page.waitForTimeout(300);
 
     // Then switch to Chair Project (the user's final choice per the screenshot)
     await page.locator('label[for="chair_project"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter project name").waitFor();
     await page.getByPlaceholder("Enter project name").fill("ml-interpretability");
     await page
       .getByPlaceholder("Describe the chair project")
       .fill("A study to compare different ML explanation methods.");
     await page.getByPlaceholder("Enter responsible person").fill("Jane Doe");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Resource Configuration");
 
     // Step 2: Resources - set CPU to 2 (matching the issue screenshot)
     const cpuInput = page.locator('input[type="number"]').first();
     await cpuInput.fill("2");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Firewall Configuration");
 
     // Step 3: Firewall - add public ports 80 and 443
     await page.getByRole("button", { name: /Add Port/i }).click();
-    await page.waitForTimeout(200);
+    await page.getByPlaceholder("Why is this port needed?").first().waitFor();
     const portInputs1 = page.locator('input[type="number"]');
     await portInputs1.last().fill("80");
     const protocolSelects1 = page.getByRole("combobox");
@@ -63,14 +81,14 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
     await reasonInputs1.last().fill("Web server");
     const publicCheckboxes1 = page.getByLabel("Publicly accessible");
     await publicCheckboxes1.last().check();
-    await page.waitForTimeout(200);
     const justificationInputs1 = page.getByPlaceholder(
       "Why does this port need to be publicly accessible?",
     );
+    await justificationInputs1.last().waitFor();
     await justificationInputs1.last().fill("Standard");
 
     await page.getByRole("button", { name: /Add Port/i }).click();
-    await page.waitForTimeout(200);
+    await expect(page.locator('input[type="number"]')).toHaveCount(3);
     const portInputs2 = page.locator('input[type="number"]');
     await portInputs2.last().fill("443");
     const protocolSelects2 = page.getByRole("combobox");
@@ -80,33 +98,27 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
     await reasonInputs2.last().fill("HTTPS server");
     const publicCheckboxes2 = page.getByLabel("Publicly accessible");
     await publicCheckboxes2.last().check();
-    await page.waitForTimeout(200);
     const justificationInputs2 = page.getByPlaceholder(
       "Why does this port need to be publicly accessible?",
     );
+    await justificationInputs2.last().waitFor();
     await justificationInputs2.last().fill("Standard");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Additional User Accounts");
 
     // Step 4: Users
     await page.getByRole("button", { name: /Add User/i }).click();
-    await page.waitForTimeout(200);
+    await page.getByPlaceholder("Enter username").first().waitFor();
     await page.getByPlaceholder("Enter username").last().fill("user-one");
     await page.getByRole("button", { name: /Add User/i }).click();
-    await page.waitForTimeout(200);
+    await expect(page.getByPlaceholder("Enter username")).toHaveCount(2);
     await page.getByPlaceholder("Enter username").last().fill("user-two");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "SSH Key");
 
     // Step 5: SSH Key
-    await page.locator('label[for="new"]').click();
-    await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-    await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await fillSSHKey(page);
+    await clickNextAndWait(page, "Review Your Request");
 
     // Step 6: Submit
     await page.getByRole("button", { name: "Submit Request" }).click();
@@ -151,14 +163,7 @@ test.describe("VM Request - Project Type Switching", () => {
     authenticatedPage: page,
     request,
   }) => {
-    // Dismiss "What's New" modal
-    await page.addInitScript(() => {
-      localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-    });
-    await page.goto("/");
-    await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-    await page.getByText("Request a New VM", { exact: true }).click();
-    await page.waitForTimeout(500);
+    await navigateToVMForm(page);
 
     // Step 1: Fill basic info
     await page.getByPlaceholder("my-vm-name").fill("e2e-switch-to-thesis");
@@ -168,40 +173,32 @@ test.describe("VM Request - Project Type Switching", () => {
 
     // First select iPraktikum and fill its fields
     await page.locator('label[for="ipraktikum"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter team name").waitFor();
     await page.getByPlaceholder("Enter team name").fill("Team Switch");
     await page.getByPlaceholder("Enter coach name").fill("Coach Switch");
     await page.getByPlaceholder("Enter project lead name").fill("PL Switch");
 
     // Now switch to thesis
     await page.locator('label[for="thesis"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter thesis title").waitFor();
     await page.locator('label[for="level-BA"]').click();
     await page.getByPlaceholder("Enter thesis title").fill("Switched Thesis Title");
     await page.getByPlaceholder("Enter advisor name").fill("Prof. Switched");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Resource Configuration");
 
     // Step 2: Resources (defaults)
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Firewall Configuration");
 
     // Step 3: Firewall (defaults)
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Additional User Accounts");
 
     // Step 4: Users (none)
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "SSH Key");
 
     // Step 5: SSH Key
-    await page.locator('label[for="new"]').click();
-    await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-    await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await fillSSHKey(page);
+    await clickNextAndWait(page, "Review Your Request");
 
     // Step 6: Review & Submit
     await page.getByRole("button", { name: "Submit Request" }).click();
@@ -222,13 +219,7 @@ test.describe("VM Request - Project Type Switching", () => {
     authenticatedPage: page,
     request,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-    });
-    await page.goto("/");
-    await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-    await page.getByText("Request a New VM", { exact: true }).click();
-    await page.waitForTimeout(500);
+    await navigateToVMForm(page);
 
     await page.getByPlaceholder("my-vm-name").fill("e2e-switch-to-chair");
     await page
@@ -237,37 +228,29 @@ test.describe("VM Request - Project Type Switching", () => {
 
     // First select thesis and fill its fields
     await page.locator('label[for="thesis"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter thesis title").waitFor();
     await page.locator('label[for="level-MA"]').click();
     await page.getByPlaceholder("Enter thesis title").fill("Abandoned Thesis");
     await page.getByPlaceholder("Enter advisor name").fill("Prof. Abandoned");
 
     // Switch to chair_project
     await page.locator('label[for="chair_project"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter project name").waitFor();
     await page.getByPlaceholder("Enter project name").fill("Final Chair Project");
     await page
       .getByPlaceholder("Describe the chair project")
       .fill("This is the actual project after switching from thesis");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Resource Configuration");
 
     // Steps 2-5: defaults
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Firewall Configuration");
+    await clickNextAndWait(page, "Additional User Accounts");
+    await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await page.locator('label[for="new"]').click();
-    await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-    await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await fillSSHKey(page);
+    await clickNextAndWait(page, "Review Your Request");
 
     // Submit
     await page.getByRole("button", { name: "Submit Request" }).click();
@@ -284,13 +267,7 @@ test.describe("VM Request - Project Type Switching", () => {
     authenticatedPage: page,
     request,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-    });
-    await page.goto("/");
-    await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-    await page.getByText("Request a New VM", { exact: true }).click();
-    await page.waitForTimeout(500);
+    await navigateToVMForm(page);
 
     await page.getByPlaceholder("my-vm-name").fill("e2e-switch-to-iprak");
     await page
@@ -299,7 +276,7 @@ test.describe("VM Request - Project Type Switching", () => {
 
     // First select chair_project
     await page.locator('label[for="chair_project"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter project name").waitFor();
     await page.getByPlaceholder("Enter project name").fill("Old Project");
     await page
       .getByPlaceholder("Describe the chair project")
@@ -307,29 +284,21 @@ test.describe("VM Request - Project Type Switching", () => {
 
     // Switch to ipraktikum
     await page.locator('label[for="ipraktikum"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter team name").waitFor();
     await page.getByPlaceholder("Enter team name").fill("Team Final");
     await page.getByPlaceholder("Enter coach name").fill("Coach Final");
     await page.getByPlaceholder("Enter project lead name").fill("PL Final");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Resource Configuration");
 
     // Steps 2-5: defaults
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Firewall Configuration");
+    await clickNextAndWait(page, "Additional User Accounts");
+    await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await page.locator('label[for="new"]').click();
-    await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-    await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await fillSSHKey(page);
+    await clickNextAndWait(page, "Review Your Request");
 
     // Submit
     await page.getByRole("button", { name: "Submit Request" }).click();
@@ -352,13 +321,7 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
     authenticatedPage: page,
     request,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-    });
-    await page.goto("/");
-    await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-    await page.getByText("Request a New VM", { exact: true }).click();
-    await page.waitForTimeout(500);
+    await navigateToVMForm(page);
 
     // Fill the full form
     await page.getByPlaceholder("my-vm-name").fill("e2e-error-retry");
@@ -367,27 +330,19 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
       .fill("Testing error handling preserves form data");
 
     await page.locator('label[for="ipraktikum"]').click();
-    await page.waitForTimeout(300);
+    await page.getByPlaceholder("Enter team name").waitFor();
     await page.getByPlaceholder("Enter team name").fill("Error Team");
     await page.getByPlaceholder("Enter coach name").fill("Error Coach");
     await page.getByPlaceholder("Enter project lead name").fill("Error PL");
 
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await clickNextAndWait(page, "Resource Configuration");
+    await clickNextAndWait(page, "Firewall Configuration");
+    await clickNextAndWait(page, "Additional User Accounts");
+    await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await page.locator('label[for="new"]').click();
-    await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-    await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.waitForTimeout(300);
+    await fillSSHKey(page);
+    await clickNextAndWait(page, "Review Your Request");
 
     // Intercept the API call ONCE to simulate server error
     let intercepted = false;
@@ -423,16 +378,11 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
     ).toBeVisible();
 
     // Navigate back to step 1 to verify data is preserved
-    await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "Previous" }).click();
-    await page.waitForTimeout(300);
+    await clickPreviousAndWait(page, "SSH Key");
+    await clickPreviousAndWait(page, "Additional User Accounts");
+    await clickPreviousAndWait(page, "Firewall Configuration");
+    await clickPreviousAndWait(page, "Resource Configuration");
+    await clickPreviousAndWait(page, "Basic Information");
 
     // Verify step 1 data is preserved
     await expect(page.getByPlaceholder("my-vm-name")).toHaveValue(
@@ -441,10 +391,11 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
     await expect(page.getByPlaceholder("Enter team name")).toHaveValue("Error Team");
 
     // Navigate forward to review and retry submission
-    for (let i = 0; i < 5; i++) {
-      await page.getByRole("button", { name: "Next" }).click();
-      await page.waitForTimeout(300);
-    }
+    await clickNextAndWait(page, "Resource Configuration");
+    await clickNextAndWait(page, "Firewall Configuration");
+    await clickNextAndWait(page, "Additional User Accounts");
+    await clickNextAndWait(page, "SSH Key");
+    await clickNextAndWait(page, "Review Your Request");
 
     // Retry - should succeed now (route interceptor only blocks once)
     await page.getByRole("button", { name: "Retry Submission" }).click();

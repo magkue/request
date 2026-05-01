@@ -43,6 +43,11 @@ ci = [
 [project.scripts]
 retention-cleanup = "request_server.cli:run_retention"
 
+[tool.uv]
+# Avoid resolving packages published in the last week. This reduces exposure to compromised
+# releases while keeping routine dependency updates practical.
+exclude-newer = "7d"
+
 [tool.uv.build-backend]
 module-root = "."
 

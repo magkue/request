@@ -13,10 +13,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { submitArtemisRequest } from "@/lib/api";
-import {
-  extractContactInfo,
-  showSubmissionError,
-} from "@/lib/submission-error";
+import { handleSubmissionFailure } from "@/lib/submission-error";
 import type { ArtemisRequest, GitHubUser } from "@/types/artemis-request";
 
 export function ArtemisRequestPage() {
@@ -59,35 +56,21 @@ export function ArtemisRequestPage() {
           ticketUrl: response.data.ticketUrl,
         });
       } else {
-        setSubmitFailed(true);
-        const errorOpts = {
-          formType: "Artemis Developer Access",
-          formData: data,
-          errorMessage: response.error,
+        handleSubmissionFailure(
+          "Artemis Developer Access",
+          data,
           isAuthenticated,
-          contactInfo: isAuthenticated
-            ? undefined
-            : extractContactInfo("Artemis Developer Access", data),
-        };
-        showSubmissionError(
-          "Please review your data and try again. If the problem persists, contact support.",
-          errorOpts,
+          setSubmitFailed,
+          { apiError: response.error },
         );
       }
     } catch (error) {
-      setSubmitFailed(true);
-      const errorOpts = {
-        formType: "Artemis Developer Access",
-        formData: data,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      handleSubmissionFailure(
+        "Artemis Developer Access",
+        data,
         isAuthenticated,
-        contactInfo: isAuthenticated
-          ? undefined
-          : extractContactInfo("Artemis Developer Access", data),
-      };
-      showSubmissionError(
-        "An unexpected error occurred. Please try again later.",
-        errorOpts,
+        setSubmitFailed,
+        { caughtError: error },
       );
     } finally {
       setIsSubmitting(false);

@@ -13,10 +13,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { submitSupportRequest } from "@/lib/api";
-import {
-  extractContactInfo,
-  showSubmissionError,
-} from "@/lib/submission-error";
+import { handleSubmissionFailure } from "@/lib/submission-error";
 import type { SupportRequest } from "@/types/support-request";
 
 export function SupportRequestPage() {
@@ -55,35 +52,21 @@ export function SupportRequestPage() {
           ticketUrl: response.data.ticketUrl,
         });
       } else {
-        setSubmitFailed(true);
-        const errorOpts = {
-          formType: "Support Request",
-          formData: data,
-          errorMessage: response.error,
+        handleSubmissionFailure(
+          "Support Request",
+          data,
           isAuthenticated,
-          contactInfo: isAuthenticated
-            ? undefined
-            : extractContactInfo("Support Request", data),
-        };
-        showSubmissionError(
-          "Please review your data and try again. If the problem persists, contact support.",
-          errorOpts,
+          setSubmitFailed,
+          { apiError: response.error },
         );
       }
     } catch (error) {
-      setSubmitFailed(true);
-      const errorOpts = {
-        formType: "Support Request",
-        formData: data,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      handleSubmissionFailure(
+        "Support Request",
+        data,
         isAuthenticated,
-        contactInfo: isAuthenticated
-          ? undefined
-          : extractContactInfo("Support Request", data),
-      };
-      showSubmissionError(
-        "An unexpected error occurred. Please try again later.",
-        errorOpts,
+        setSubmitFailed,
+        { caughtError: error },
       );
     } finally {
       setIsSubmitting(false);

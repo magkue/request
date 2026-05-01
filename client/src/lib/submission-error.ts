@@ -98,6 +98,34 @@ export function showSubmissionError(
   });
 }
 
+export function handleSubmissionFailure(
+  formType: string,
+  formData: unknown,
+  isAuthenticated: boolean,
+  setSubmitFailed: (v: boolean) => void,
+  failure: { apiError?: string } | { caughtError: unknown },
+) {
+  setSubmitFailed(true);
+
+  const isCaughtError = "caughtError" in failure;
+  const errorMessage = isCaughtError
+    ? failure.caughtError instanceof Error
+      ? failure.caughtError.message
+      : "Unknown error"
+    : failure.apiError;
+
+  const contactInfo = isAuthenticated
+    ? undefined
+    : extractContactInfo(formType, formData as Record<string, unknown>);
+
+  showSubmissionError(
+    isCaughtError
+      ? "An unexpected error occurred. Please try again later."
+      : "Please review your data and try again. If the problem persists, contact support.",
+    { formType, formData, errorMessage, isAuthenticated, contactInfo },
+  );
+}
+
 export function extractContactInfo(
   formType: string,
   formData: Record<string, unknown>,

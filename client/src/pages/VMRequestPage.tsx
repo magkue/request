@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { VMRequestForm } from "@/components/vm-request/VMRequestForm";
 import { useAuth } from "@/hooks/useAuth";
 import { submitVMRequest } from "@/lib/api";
-import { showSubmissionError } from "@/lib/submission-error";
+import { handleSubmissionFailure } from "@/lib/submission-error";
 import type { VMRequest } from "@/types/vm-request";
 
 export function VMRequestPage() {
@@ -43,30 +43,14 @@ export function VMRequestPage() {
           ticketUrl: response.data.ticketUrl,
         });
       } else {
-        setSubmitFailed(true);
-        const errorOpts = {
-          formType: "VM Request",
-          formData: data,
-          errorMessage: response.error,
-          isAuthenticated: true,
-        };
-        showSubmissionError(
-          "Please review your data and try again. If the problem persists, contact support.",
-          errorOpts,
-        );
+        handleSubmissionFailure("VM Request", data, true, setSubmitFailed, {
+          apiError: response.error,
+        });
       }
     } catch (error) {
-      setSubmitFailed(true);
-      const errorOpts = {
-        formType: "VM Request",
-        formData: data,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-        isAuthenticated: true,
-      };
-      showSubmissionError(
-        "An unexpected error occurred. Please try again later.",
-        errorOpts,
-      );
+      handleSubmissionFailure("VM Request", data, true, setSubmitFailed, {
+        caughtError: error,
+      });
     } finally {
       setIsSubmitting(false);
     }

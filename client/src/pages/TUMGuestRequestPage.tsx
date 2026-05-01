@@ -7,10 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { submitTUMGuestRequest } from "@/lib/api";
-import {
-  extractContactInfo,
-  showSubmissionError,
-} from "@/lib/submission-error";
+import { handleSubmissionFailure } from "@/lib/submission-error";
 import type { TUMGuestRequest } from "@/types/tum-guest-request";
 
 interface SubmitResult {
@@ -56,35 +53,21 @@ export function TUMGuestRequestPage() {
           guestEmail: data.email,
         });
       } else {
-        setSubmitFailed(true);
-        const errorOpts = {
-          formType: "TUM Guest Account",
-          formData: data,
-          errorMessage: response.error,
+        handleSubmissionFailure(
+          "TUM Guest Account",
+          data,
           isAuthenticated,
-          contactInfo: isAuthenticated
-            ? undefined
-            : extractContactInfo("TUM Guest Account", data),
-        };
-        showSubmissionError(
-          "Please review your data and try again. If the problem persists, contact support.",
-          errorOpts,
+          setSubmitFailed,
+          { apiError: response.error },
         );
       }
     } catch (error) {
-      setSubmitFailed(true);
-      const errorOpts = {
-        formType: "TUM Guest Account",
-        formData: data,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      handleSubmissionFailure(
+        "TUM Guest Account",
+        data,
         isAuthenticated,
-        contactInfo: isAuthenticated
-          ? undefined
-          : extractContactInfo("TUM Guest Account", data),
-      };
-      showSubmissionError(
-        "An unexpected error occurred. Please try again later.",
-        errorOpts,
+        setSubmitFailed,
+        { caughtError: error },
       );
     } finally {
       setIsSubmitting(false);
