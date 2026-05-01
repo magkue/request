@@ -7,6 +7,7 @@ import { VMRequestForm } from "@/components/vm-request/VMRequestForm";
 import { useAuth } from "@/hooks/useAuth";
 import { submitVMRequest } from "@/lib/api";
 import { handleSubmissionFailure } from "@/lib/submission-error";
+import { cleanProjectDetails } from "@/services/vm-requests";
 import type { VMRequest } from "@/types/vm-request";
 
 export function VMRequestPage() {
@@ -20,9 +21,10 @@ export function VMRequestPage() {
     ticketUrl?: string | null;
   } | null>(null);
 
-  const handleSubmit = async (data: VMRequest) => {
+  const handleSubmit = async (rawData: VMRequest) => {
     if (!user) return;
 
+    const data = cleanProjectDetails(rawData);
     setIsSubmitting(true);
     setSubmitFailed(false);
     try {

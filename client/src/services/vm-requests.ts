@@ -34,7 +34,7 @@ export interface VMRequestListItem {
   created_at: string;
 }
 
-function cleanProjectDetails(data: VMRequest): VMRequest {
+export function cleanProjectDetails(data: VMRequest): VMRequest {
   const { ipraktikum, thesis, chairProject, ...rest } = data;
   return {
     ...rest,

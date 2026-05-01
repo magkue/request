@@ -1,36 +1,28 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "../fixtures/auth";
 import { VM_REQUEST_CONFIGS } from "../fixtures/test-data";
-import { TEST_SSH_KEY_NAME, TEST_SSH_PUBLIC_KEY } from "../fixtures/test-data";
 import { resetTestState, getLatestTicket } from "../helpers/debug-api";
-import { fillVMRequestForm } from "../helpers/form-fillers";
+import {
+  clickNext,
+  fillNewSSHKey,
+  fillVMRequestForm,
+  navigateFromHome,
+} from "../helpers/form-fillers";
 import { SERVER_URL } from "../playwright.config";
 
 async function navigateToVMForm(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
-  });
-  await page.goto("/");
-  await page.getByText("Request Forms").waitFor({ timeout: 10000 });
-  await page.getByText("Request a New VM", { exact: true }).click();
+  await navigateFromHome(page, "Request a New VM");
   await page.getByText("Basic Information").waitFor();
 }
 
 async function clickNextAndWait(page: Page, nextStepTitle: string) {
-  await page.getByRole("button", { name: "Next" }).click();
+  await clickNext(page);
   await page.getByRole("heading", { name: nextStepTitle }).waitFor();
 }
 
 async function clickPreviousAndWait(page: Page, prevStepTitle: string) {
   await page.getByRole("button", { name: "Previous" }).click();
   await page.getByRole("heading", { name: prevStepTitle }).waitFor();
-}
-
-async function fillSSHKey(page: Page) {
-  await page.locator('label[for="new"]').click();
-  await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
-  await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);
-  await expect(page.getByRole("button", { name: "Next" })).toBeEnabled({ timeout: 5000 });
 }
 
 test.describe("VM Request - Issue #1 Reproduction", () => {
@@ -118,7 +110,7 @@ test.describe("VM Request - Issue #1 Reproduction", () => {
     await clickNextAndWait(page, "SSH Key");
 
     // Step 5: SSH Key
-    await fillSSHKey(page);
+    await fillNewSSHKey(page);
     await clickNextAndWait(page, "Review Your Request");
 
     // Step 6: Submit
@@ -198,7 +190,7 @@ test.describe("VM Request - Project Type Switching", () => {
     await clickNextAndWait(page, "SSH Key");
 
     // Step 5: SSH Key
-    await fillSSHKey(page);
+    await fillNewSSHKey(page);
     await clickNextAndWait(page, "Review Your Request");
 
     // Step 6: Review & Submit
@@ -250,7 +242,7 @@ test.describe("VM Request - Project Type Switching", () => {
     await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await fillSSHKey(page);
+    await fillNewSSHKey(page);
     await clickNextAndWait(page, "Review Your Request");
 
     // Submit
@@ -298,7 +290,7 @@ test.describe("VM Request - Project Type Switching", () => {
     await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await fillSSHKey(page);
+    await fillNewSSHKey(page);
     await clickNextAndWait(page, "Review Your Request");
 
     // Submit
@@ -342,21 +334,21 @@ test.describe("VM Request - Error Handling Preserves Form Data", () => {
     await clickNextAndWait(page, "SSH Key");
 
     // SSH Key
-    await fillSSHKey(page);
+    await fillNewSSHKey(page);
     await clickNextAndWait(page, "Review Your Request");
 
     // Intercept the API call ONCE to simulate server error
     let intercepted = false;
-    await page.route(`${SERVER_URL}/api/v1/vm-requests`, (route) => {
+    await page.route(`${SERVER_URL}/api/v1/vm-requests`, async (route) => {
       if (!intercepted && route.request().method() === "POST") {
         intercepted = true;
-        route.fulfill({
+        await route.fulfill({
           status: 500,
           contentType: "application/json",
           body: JSON.stringify({ detail: "Internal Server Error" }),
         });
       } else {
-        route.continue();
+        await route.continue();
       }
     });
 

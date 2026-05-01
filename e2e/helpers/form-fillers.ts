@@ -14,7 +14,7 @@ import { SERVER_URL } from "../playwright.config";
 
 // ── Navigation helpers ────────────────────────────────────────────────────
 
-async function navigateFromHome(page: Page, cardTitle: string): Promise<void> {
+export async function navigateFromHome(page: Page, cardTitle: string): Promise<void> {
   await page.addInitScript(() => {
     localStorage.setItem("aet-request.whats-new.v1.dismissed", "true");
   });
@@ -26,7 +26,7 @@ async function navigateFromHome(page: Page, cardTitle: string): Promise<void> {
 
 // ── Shared helpers ────────────────────────────────────────────────────────
 
-async function clickNext(page: Page): Promise<void> {
+export async function clickNext(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Next" }).click();
   // Wait for step transition
   await page.waitForTimeout(300);
@@ -57,7 +57,7 @@ async function selectShadcnOption(
   await page.getByRole("option", { name: optionText, exact: true }).click();
 }
 
-async function fillNewSSHKey(page: Page): Promise<void> {
+export async function fillNewSSHKey(page: Page): Promise<void> {
   await selectRadioCard(page, "new");
   await page.getByPlaceholder("e.g., My Laptop, Work Desktop").fill(TEST_SSH_KEY_NAME);
   await page.getByPlaceholder("ssh-ed25519 AAAA").fill(TEST_SSH_PUBLIC_KEY);

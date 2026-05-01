@@ -83,8 +83,8 @@ async function setupOidcInterception(page: Page): Promise<void> {
   // Intercept OIDC discovery
   await page.route(
     `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration`,
-    (route) => {
-      route.fulfill({
+    async (route) => {
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(MOCK_OIDC_CONFIG),
@@ -95,8 +95,8 @@ async function setupOidcInterception(page: Page): Promise<void> {
   // Intercept JWKS endpoint
   await page.route(
     `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs`,
-    (route) => {
-      route.fulfill({
+    async (route) => {
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ keys: [] }),
@@ -105,8 +105,8 @@ async function setupOidcInterception(page: Page): Promise<void> {
   );
 
   // Intercept session iframe
-  await page.route("**/login-status-iframe.html**", (route) => {
-    route.fulfill({
+  await page.route("**/login-status-iframe.html**", async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: "text/html",
       body: "<html><body></body></html>",
@@ -116,8 +116,8 @@ async function setupOidcInterception(page: Page): Promise<void> {
   // Intercept token endpoint (for silent renew)
   await page.route(
     `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
-    (route) => {
-      route.fulfill({
+    async (route) => {
+      await route.fulfill({
         status: 400,
         contentType: "application/json",
         body: JSON.stringify({ error: "invalid_grant", error_description: "Session not active" }),
@@ -128,8 +128,8 @@ async function setupOidcInterception(page: Page): Promise<void> {
   // Intercept userinfo endpoint
   await page.route(
     `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/userinfo`,
-    (route) => {
-      route.fulfill({
+    async (route) => {
+      await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
@@ -146,7 +146,7 @@ async function setupOidcInterception(page: Page): Promise<void> {
   );
 
   // Block any other requests to Keycloak to prevent hangs
-  await page.route(`${KEYCLOAK_URL}/**`, (route) => {
+  await page.route(`${KEYCLOAK_URL}/**`, async (route) => {
     const url = route.request().url();
     if (
       url.includes(".well-known/openid-configuration") ||
@@ -155,10 +155,10 @@ async function setupOidcInterception(page: Page): Promise<void> {
       url.includes("/token") ||
       url.includes("/userinfo")
     ) {
-      route.fallback();
+      await route.fallback();
       return;
     }
-    route.fulfill({
+    await route.fulfill({
       status: 200,
       contentType: "text/html",
       body: "<html><body>mocked</body></html>",
@@ -167,10 +167,10 @@ async function setupOidcInterception(page: Page): Promise<void> {
 }
 
 async function setupGitHubMock(page: Page): Promise<void> {
-  await page.route("**/api.github.com/users/**", (route) => {
+  await page.route("**/api.github.com/users/**", async (route) => {
     const url = route.request().url();
     const username = url.split("/users/")[1];
-    route.fulfill({
+    await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({

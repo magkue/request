@@ -151,10 +151,10 @@ def account_info_block(
     """
     content = (
         f"{username}:\n"
-        f"\tname: {name or 'N/A'}\n"
-        f"\temail: {email or 'N/A'}\n"
-        f"\tpk: {public_key or 'N/A'}\n"
-        f"\tpw: {generate_sha512_password()}"
+        f"  name: {name or 'N/A'}\n"
+        f"  email: {email or 'N/A'}\n"
+        f"  pk: {public_key or 'N/A'}\n"
+        f"  pw: {generate_sha512_password()}"
     )
     return code_block(content)
 

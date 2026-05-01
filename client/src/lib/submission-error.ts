@@ -35,7 +35,11 @@ function buildDescription(
   return parts.join("\n");
 }
 
+let isReporting = false;
+
 async function submitReport(options: SubmissionErrorOptions) {
+  if (isReporting) return;
+  isReporting = true;
   const { formType, formData, errorMessage, isAuthenticated, contactInfo } =
     options;
 
@@ -83,6 +87,8 @@ async function submitReport(options: SubmissionErrorOptions) {
     toast.error("Could not submit report", {
       description: "Please contact support directly.",
     });
+  } finally {
+    isReporting = false;
   }
 }
 
