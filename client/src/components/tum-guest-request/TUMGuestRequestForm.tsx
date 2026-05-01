@@ -22,11 +22,13 @@ import { ReviewStep } from "./steps/ReviewStep";
 interface TUMGuestRequestFormProps {
   onSubmit: (data: TUMGuestRequest) => Promise<void>;
   isSubmitting: boolean;
+  submitFailed?: boolean;
 }
 
 export function TUMGuestRequestForm({
   onSubmit,
   isSubmitting,
+  submitFailed,
 }: TUMGuestRequestFormProps) {
   const { isAuthenticated, login } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -208,6 +210,7 @@ export function TUMGuestRequestForm({
           currentStep={currentStep}
           totalSteps={steps.length}
           isSubmitting={isSubmitting}
+          submitFailed={submitFailed}
           isNextDisabled={isNextDisabled}
           onPrevious={handlePrevious}
           onNext={handleNext}

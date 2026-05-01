@@ -24,11 +24,13 @@ import { ReviewStep } from "./steps/ReviewStep";
 interface ArtemisRequestFormProps {
   onSubmit: (data: ArtemisRequest, githubUser?: GitHubUser) => Promise<void>;
   isSubmitting: boolean;
+  submitFailed?: boolean;
 }
 
 export function ArtemisRequestForm({
   onSubmit,
   isSubmitting,
+  submitFailed,
 }: ArtemisRequestFormProps) {
   const { isAuthenticated, user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -217,6 +219,7 @@ export function ArtemisRequestForm({
           currentStep={currentStep}
           totalSteps={steps.length}
           isSubmitting={isSubmitting}
+          submitFailed={submitFailed}
           isNextDisabled={isNextDisabled()}
           onPrevious={handlePrevious}
           onNext={handleNext}

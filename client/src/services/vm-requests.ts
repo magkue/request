@@ -34,9 +34,24 @@ export interface VMRequestListItem {
   created_at: string;
 }
 
+function cleanProjectDetails(data: VMRequest): VMRequest {
+  const { ipraktikum, thesis, chairProject, ...rest } = data;
+  return {
+    ...rest,
+    ...(data.projectType === "ipraktikum" && ipraktikum ? { ipraktikum } : {}),
+    ...(data.projectType === "thesis" && thesis ? { thesis } : {}),
+    ...(data.projectType === "chair_project" && chairProject
+      ? { chairProject }
+      : {}),
+  };
+}
+
 export const vmRequestsService = {
   create: async (data: VMRequest): Promise<VMRequestResponse> => {
-    return api.post<VMRequestResponse>("/vm-requests", data);
+    return api.post<VMRequestResponse>(
+      "/vm-requests",
+      cleanProjectDetails(data),
+    );
   },
 
   list: async (): Promise<VMRequestListItem[]> => {

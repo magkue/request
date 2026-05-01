@@ -137,6 +137,21 @@ class VMRequestCreate(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    @model_validator(mode="before")
+    @classmethod
+    def strip_non_matching_project_details(cls, data: dict) -> dict:
+        if isinstance(data, dict):
+            project_type = data.get("projectType") or data.get("project_type")
+            for key, pt in [
+                ("ipraktikum", "ipraktikum"),
+                ("thesis", "thesis"),
+                ("chairProject", "chair_project"),
+                ("chair_project", "chair_project"),
+            ]:
+                if key in data and (project_type != pt or data[key] == {}):
+                    data.pop(key)
+        return data
+
     @field_validator("hostname")
     @classmethod
     def validate_hostname(cls, v: str) -> str:

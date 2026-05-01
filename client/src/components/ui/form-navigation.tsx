@@ -1,10 +1,12 @@
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CircleX, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface FormNavigationProps {
   currentStep: number;
   totalSteps: number;
   isSubmitting: boolean;
+  submitFailed?: boolean;
   isNextDisabled?: boolean;
   onPrevious: () => void;
   onNext: () => void;
@@ -15,6 +17,7 @@ export function FormNavigation({
   currentStep,
   totalSteps,
   isSubmitting,
+  submitFailed = false,
   isNextDisabled = false,
   onPrevious,
   onNext,
@@ -35,11 +38,22 @@ export function FormNavigation({
       </Button>
 
       {isLastStep ? (
-        <Button type="button" onClick={onSubmit} disabled={isSubmitting}>
+        <Button
+          type="button"
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          variant={submitFailed ? "destructive" : "default"}
+          className={cn(submitFailed && "animate-shake")}
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Submitting...
+            </>
+          ) : submitFailed ? (
+            <>
+              <CircleX className="mr-2 h-4 w-4" />
+              Retry Submission
             </>
           ) : (
             "Submit Request"

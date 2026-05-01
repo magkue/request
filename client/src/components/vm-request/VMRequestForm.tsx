@@ -24,6 +24,7 @@ import { UsersStep } from "./steps/UsersStep";
 interface VMRequestFormProps {
   onSubmit: (data: VMRequest) => Promise<void>;
   isSubmitting: boolean;
+  submitFailed?: boolean;
 }
 
 const stepSchemas = [
@@ -35,7 +36,11 @@ const stepSchemas = [
   null, // Review step - full validation
 ];
 
-export function VMRequestForm({ onSubmit, isSubmitting }: VMRequestFormProps) {
+export function VMRequestForm({
+  onSubmit,
+  isSubmitting,
+  submitFailed,
+}: VMRequestFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
 
   const form = useForm<VMRequest>({
@@ -163,6 +168,7 @@ export function VMRequestForm({ onSubmit, isSubmitting }: VMRequestFormProps) {
           currentStep={currentStep}
           totalSteps={VM_REQUEST_STEPS.length}
           isSubmitting={isSubmitting}
+          submitFailed={submitFailed}
           isNextDisabled={hasErrorsInCurrentStep()}
           onPrevious={handlePrevious}
           onNext={handleNext}

@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { Toaster } from "@/components/ui/sonner";
 import { AboutPage } from "@/pages/AboutPage";
 import { ArtemisRequestPage } from "@/pages/ArtemisRequestPage";
 import { ExternalLinksAdminPage } from "@/pages/ExternalLinksAdminPage";
@@ -58,6 +59,7 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/imprint" element={<ImprintPage />} />
         </Routes>
+        <Toaster position="top-center" richColors closeButton />
       </AuthProvider>
     </BrowserRouter>
   );

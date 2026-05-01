@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleX, Loader2 } from "lucide-react";
 import { FormProvider, useForm } from "react-hook-form";
 import { RequesterInfo } from "@/components/shared/RequesterInfo";
 import { Button } from "@/components/ui/button";
@@ -34,11 +35,13 @@ import {
 interface SupportRequestFormProps {
   onSubmit: (data: SupportRequest) => void;
   isSubmitting: boolean;
+  submitFailed?: boolean;
 }
 
 export function SupportRequestForm({
   onSubmit,
   isSubmitting,
+  submitFailed,
 }: SupportRequestFormProps) {
   const { isAuthenticated, user } = useAuth();
 
@@ -211,8 +214,25 @@ export function SupportRequestForm({
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Request"}
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            variant={submitFailed ? "destructive" : "default"}
+            className={submitFailed ? "animate-shake" : ""}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : submitFailed ? (
+              <>
+                <CircleX className="mr-2 h-4 w-4" />
+                Retry Submission
+              </>
+            ) : (
+              "Submit Request"
+            )}
           </Button>
         </div>
       </form>

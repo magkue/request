@@ -16,11 +16,13 @@ import { ReviewStep } from "./steps/ReviewStep";
 interface VMAccessRequestFormProps {
   onSubmit: (data: VMAccessRequest) => Promise<void>;
   isSubmitting: boolean;
+  submitFailed?: boolean;
 }
 
 export function VMAccessRequestForm({
   onSubmit,
   isSubmitting,
+  submitFailed,
 }: VMAccessRequestFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -124,6 +126,7 @@ export function VMAccessRequestForm({
           currentStep={currentStep}
           totalSteps={VM_ACCESS_STEPS.length}
           isSubmitting={isSubmitting}
+          submitFailed={submitFailed}
           isNextDisabled={hasErrorsInCurrentStep()}
           onPrevious={handlePrevious}
           onNext={handleNext}

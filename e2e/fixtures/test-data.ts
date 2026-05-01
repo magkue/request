@@ -123,6 +123,22 @@ export const VM_REQUEST_CONFIGS: Record<string, VMRequestTestConfig> = {
     sshKeyType: "existing",
     additionalComments: "Please configure Docker runtime",
   },
+  // Reproduction of GitHub issue #1: chair project with public ports and low resources
+  issue_1_chair_project_with_public_ports: {
+    hostname: "e2e-issue1-vm",
+    description: "VM for the research study on ML interpretability",
+    projectType: "chair_project",
+    projectName: "ml-interpretability",
+    projectDescription: "A study to compare different ML explanation methods.",
+    responsiblePerson: "Jane Doe",
+    cpuCores: 2,
+    additionalPorts: [
+      { port: 80, protocol: "tcp", reason: "Web server", publicAccess: true, publicJustification: "Standard" },
+      { port: 443, protocol: "tcp", reason: "HTTPS server", publicAccess: true, publicJustification: "Standard" },
+    ],
+    additionalUsers: ["user-one", "user-two"],
+    sshKeyType: "new",
+  },
 };
 
 // ── VM Access Request test data ───────────────────────────────────────────
